@@ -336,7 +336,9 @@ body.present .dock:hover, body.present .dock:focus-within, body.present .dock.wa
 .tag{font-size:.72rem;font-weight:700;background:var(--surface-2);border-radius:999px;padding:2px 9px;color:var(--muted)}
 
 /* ---------- bug hunt ---------- */
-.bugcode .bugln{display:grid;grid-template-columns:3em 1fr auto;width:100%;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;padding:0 16px 0 0;border-left:5px solid transparent}
+.bugcode .bugln{display:grid;grid-template-columns:3em 1fr auto;width:100%;border:0;background:transparent;color:var(--code-ink);font-family:var(--mono);font-size:1.1rem;line-height:1.9;text-align:left;cursor:pointer;padding:0 16px 0 0;border-left:5px solid transparent;-webkit-appearance:none;appearance:none}
+.bugcode .bugln span{white-space:pre}
+.bugcode .bugln i{font-style:normal;color:var(--code-muted);text-align:right;padding-right:14px}
 .bugcode .bugln:hover{background:var(--code-line)}
 .bugcode .bugln[aria-pressed="true"]{background:rgba(244,197,66,.16);border-left-color:var(--mark)}
 .bugcode .bugln[aria-pressed="true"] .flag::after{content:"🚩";font-style:normal}
@@ -350,9 +352,11 @@ body.present .dock:hover, body.present .dock:focus-within, body.present .dock.wa
 
 /* ---------- loop trace table ---------- */
 .ttwrap{overflow-x:auto}
-.ttable{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:1.05rem}
-.ttable th,.ttable td{border:1px solid var(--line);padding:6px 10px;text-align:center;min-width:3.5em}
-.ttable th{background:var(--accent-soft);color:var(--ink);font-size:.85rem;letter-spacing:.04em}
+.ttable{border-collapse:separate;border-spacing:0;width:100%;font-family:var(--mono);font-size:1.3rem;border:2px solid var(--line);border-radius:10px;overflow:hidden}
+.ttable th,.ttable td{border-right:2px solid var(--line);border-bottom:2px solid var(--line);padding:12px 22px;text-align:center;min-width:5.5em;height:2.6em}
+.ttable tr > :last-child{border-right:0}
+.ttable tbody tr:last-child td{border-bottom:0}
+.ttable th{background:var(--accent-soft);color:var(--ink);font-size:1.05rem;font-weight:700;letter-spacing:.02em}
 .ttable tr.currow td{background:var(--surface-2)}
 .ttable td.new{background:var(--mark-soft)!important;font-weight:700;outline:2px solid var(--mark);outline-offset:-2px}
 
@@ -363,10 +367,10 @@ body.present .dock:hover, body.present .dock:focus-within, body.present .dock.wa
 .rxin input{width:4.5em;border:2px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--surface-2);font-family:var(--mono);font-size:1.1rem}
 .rxmode button{padding:6px 10px;font-family:var(--mono);font-size:.82rem}
 .rxmode button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
-.rxboxes{display:flex;flex-wrap:wrap;gap:8px;min-height:4.2em;align-items:center}
-.rxbox{display:grid;place-items:center;min-width:3.4em;padding:6px 8px;border-radius:10px;background:var(--mark-soft);border:2px solid var(--mark);animation:pop .25s both}
-.rxbox small{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
-.rxbox b{font-family:var(--mono);font-size:1.4rem}
+.rxboxes{display:flex;flex-wrap:wrap;gap:10px;min-height:4.6em;align-items:center}
+.rxbox{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:4.2em;padding:8px 10px;border-radius:12px;background:var(--mark-soft);border:2px solid var(--mark);animation:pop .25s both}
+.rxbox small{display:block;font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.rxbox b{display:block;font-family:var(--mono);font-size:1.7rem;line-height:1.1}
 .rxempty{font-weight:700;color:var(--bad)}
 @keyframes pop{from{transform:scale(.7)}to{transform:none}}
 @media (prefers-reduced-motion:reduce){.rxbox{animation:none}}
