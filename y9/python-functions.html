@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Functions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="../shared/lesson.css">
+<script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="../firebase-config.js"></script>
+<script src="../shared/lesson.js"></script>
+</head>
+<body>
+<script>
+const L = Lesson, code = L.code;
+
+/* ---------- code used in the lesson ---------- */
+const AREA = `def area(length, width):
+    result = length * width
+    return result
+
+room = area(4, 3)
+print("Room:", room)
+print("Desk:", area(2, 1))`;
+
+const SCOPE_SRC = `bonus = 5
+
+def add_bonus(score):
+    total = score + bonus
+    return total
+
+result = add_bonus(10)
+print(result)
+print(total)`;
+
+const SHADOW_SRC = `x = 10
+
+def change():
+    x = 99
+    print("inside:", x)
+
+change()
+print("outside:", x)`;
+
+const ANN_CODE = `def average(a, b, c):
+    total = a + b + c
+    mean = total / 3
+    return mean
+
+score = average(70, 85, 64)
+print("Average:", round(score, 1))`;
+
+const MOD_START = `def area(length, width):
+    result = length * width
+    return result
+
+print("Area:", area(5, 2))`;
+
+const MAKE_START = {
+  support:`def item_cost(price, quantity):
+    # multiply price by quantity and return the answer
+
+
+def add_service(total):
+    # add 10% to the total and return the new total
+
+
+snacks = item_cost(1500, 4)
+print("Snacks:", snacks, "won")
+print("With service:", add_service(snacks), "won")`,
+  core:`def item_cost(price, quantity):
+
+
+def add_service(total):
+
+
+# Call your functions here for 4 snacks at 1500 won each
+`,
+  stretch:`# Snack shop receipt
+# Write item_cost, add_service and apply_discount
+# then print a neat receipt.
+`};
+const MOD_TESTS = {
+  support:[{label:'perimeter(5, 2) returns 14', expr:'perimeter(5, 2) == 14'},{label:'perimeter(3, 3) returns 12', expr:'perimeter(3, 3) == 12'}],
+  core:[{label:'volume(2, 3, 4) returns 24', expr:'volume(2, 3, 4) == 24'},{label:'volume(10, 1, 1) returns 10', expr:'volume(10, 1, 1) == 10'}],
+  stretch:[{label:'area_and_perimeter(5, 2) returns (10, 14)', expr:'area_and_perimeter(5, 2) == (10, 14)'},{label:'rectangle(5) works with width defaulting to 1', expr:'rectangle(5) == 5'},{label:'rectangle(5, 3) returns 15', expr:'rectangle(5, 3) == 15'}]};
+const MAKE_TESTS = {
+  support:[{label:'item_cost(1500, 4) returns 6000', expr:'item_cost(1500, 4) == 6000'},{label:'add_service(6000) returns 6600', expr:'abs(add_service(6000) - 6600) < 0.01'}],
+  core:[{label:'item_cost(1500, 4) returns 6000', expr:'item_cost(1500, 4) == 6000'},{label:'item_cost(800, 0) returns 0', expr:'item_cost(800, 0) == 0'},{label:'add_service(6000) returns 6600', expr:'abs(add_service(6000) - 6600) < 0.01'}],
+  stretch:[{label:'item_cost(1500, 4) returns 6000', expr:'item_cost(1500, 4) == 6000'},{label:'add_service(6000) returns 6600', expr:'abs(add_service(6000) - 6600) < 0.01'},{label:'apply_discount(10000, 20) returns 8000', expr:'abs(apply_discount(10000, 20) - 8000) < 0.01'},{label:'apply_discount(10000) returns 10000 (default 0%)', expr:'abs(apply_discount(10000) - 10000) < 0.01'}]};
+
+const scopeVC = (n, w) => ({bonus:'v-g', result:'v-g', score:'v-l'})[w] || (w === 'total' ? (n === 9 ? 'v-e' : 'v-l') : null);
+const shadowVC = (n, w) => w === 'x' ? ((n === 4 || n === 5) ? 'v-l' : 'v-g') : null;
+const areaVC = (n, w) => ({length:'v-l', width:'v-l', result:'v-l', room:'v-g'})[w] || null;
+
+/* ---------- investigate questions ---------- */
+const QS = [
+ ['support','What is the name of the function?','<code>area</code>. It comes straight after <code>def</code>.'],
+ ['support','What are the two parameters?','<code>length</code> and <code>width</code>. They are the names in the brackets on the <code>def</code> line.'],
+ ['support','Which line sends the answer back?','Line 3: <code>return result</code>.'],
+ ['core','What is the difference between a parameter and an argument? Give one example of each from the code.','A <b>parameter</b> is the name in the definition (<code>length</code>). An <b>argument</b> is the actual value passed in the call (<code>4</code>).'],
+ ['core','What value does <code>result</code> hold the second time the function runs?','<b>2</b>, because <code>area(2, 1)</code> gives 2 × 1.'],
+ ['core','Why does nothing happen when Python reads lines 1–3?','Defining a function only stores it. The code inside runs only when the function is <b>called</b>.'],
+ ['stretch','Delete line 3 and run the program. What prints, and why?','<code>Room: None</code> / <code>Desk: None</code>. Without <code>return</code>, a function sends back <code>None</code>.'],
+ ['stretch','Add <code>print(result)</code> at the end of the program. What happens, and why?','A <b>NameError</b>. <code>result</code> is a local variable, so it only exists inside the function.'],
+ ['stretch','Rewrite the function so its body is only one line.','<code>return length * width</code>']];
+
+L.start({
+  root: '..',
+  title: 'Python Functions',
+  subtitle: 'Year 9 · def, parameters, return',
+  glossary: [
+    {term:'function', ko:'함수', def:'A named block of code that does one job. You can use it again and again.'},
+    {term:'define · <code>def</code>', ko:'정의하다', def:'Create a function. <code>def area(length, width):</code>'},
+    {term:'call', ko:'호출하다', def:'Run the function by using its name. <code>area(4, 3)</code>'},
+    {term:'parameter', ko:'매개변수', def:'The name in the brackets when you <b>define</b> the function. <code>length</code>'},
+    {term:'argument', ko:'인수 (인자)', def:'The value you give when you <b>call</b> the function. <code>4</code>'},
+    {term:'return', ko:'반환하다', def:'Send a value back to where the function was called.'},
+    {term:'global variable', ko:'전역 변수', def:'A variable made in the main program, outside any function. It can be read anywhere.'},
+    {term:'local variable', ko:'지역 변수', def:'A variable made inside a function. It only exists inside that function.'},
+    {term:'scope', ko:'범위 (스코프)', def:'The part of the program where a variable exists and can be used.'},
+    {term:'indentation', ko:'들여쓰기', def:'The 4 spaces that show which lines belong inside the function.'}
+  ],
+  questions: {
+    'q-why': {title:'What is the main reason programmers use functions?', opts:['It makes the program run faster','You write code once and reuse it','Every Python program must have one','It stops all errors'], correct:1},
+    'predict': {title:'What will this program print?', opts:['Room: 12\nDesk: 2','Room: result\nDesk: result','(nothing is printed)','Room: 7\nDesk: 3'], correct:0, code:AREA},
+    'q-run': {title:'After line 5 runs, what is stored in the variable room?', opts:['area','4, 3','12','result'], correct:2},
+    't-param': {type:'text', title:'Type the two parameters of area, separated by a comma.', accept:['length, width','width, length'], mono:true, placeholder:'e.g. one, two'},
+    'q-param': {title:'In the call area(4, 3), what are 4 and 3?', opts:['parameters','arguments','return values','local variables'], correct:1},
+    't-scope': {type:'text', title:'Type the name of the local variable created on line 4.', accept:['total'], placeholder:'one word'},
+    'q-scope1': {title:'What happens when line 9 runs?', opts:['It prints 15','It prints total','NameError: total is not defined','It prints 0'], correct:2, code:SCOPE_SRC},
+    'q-scope2': {title:'Challenge: what does the last line print?', opts:['outside: 10','outside: 99','An error','outside: None'], correct:0, code:SHADOW_SRC},
+    'c-annotate': {type:'checkin', title:'Annotate code: how did you get on?'},
+    'c-parsons': {type:'checkin', title:'Parsons problem: how did you get on?'},
+    'q-gaps': {title:'If line 3 said print(cost) instead of return cost, what would the last line print?', opts:['Total: 13500 won','Total: None won','An error','Total: cost won'], correct:1},
+    't-print': {type:'text', title:'Type exactly what the finished program prints.', accept:['Total: 13500 won','13500'], placeholder:'Total: … won'},
+    'c-gaps': {type:'checkin', title:'Fill the gaps: how did you get on?'},
+    'c-modify': {type:'checkin', title:'Modify: did your code pass the checks?'},
+    't-def': {type:'text', title:'Type the def line for a function called greet that takes one parameter, name.', accept:['def greet(name):'], mono:true, placeholder:'def …'},
+    'c-make': {type:'checkin', title:'Make: did your code pass the checks?'},
+    'ex1': {title:'Which keyword sends a value back from a function?', opts:['print','return','def','output'], correct:1},
+    'ex2': {title:'In  def square(n):  the n is…', opts:['an argument','a parameter','a return value','a function name'], correct:1},
+    'ex3': {title:'What does this program print?', opts:['6','12','9','An error'], correct:1, code:'def double(x):\n    return x * 2\n\nprint(double(double(3)))'},
+    'conf': {title:'How confident do you feel about functions now?', opts:['1 · Not yet','2','3','4','5 · Very confident'], correct:-1}
+  },
+  stages: [
+    {key:'intro', label:'Why functions?', html:`
+      <div class="stage-head"><div><div class="eyebrow">Starter · 5 minutes</div><h2 id="h-intro">Why do programmers use functions?</h2></div></div>
+      <div class="cols">
+        <div class="panel"><h3>Look at this program. What is the problem with it?</h3>
+          ${code(`print("-----------")
+print("  SCORE: 10  ")
+print("-----------")
+# ...later in the game...
+print("-----------")
+print("  SCORE: 25  ")
+print("-----------")
+# ...and again...
+print("-----------")
+print("  SCORE: 40  ")
+print("-----------")`)}
+          <details class="q"><summary>What did the class notice?</summary><div class="ans">The same 3 lines are copied again and again. To change the design, you would need to edit every copy, and it's easy to miss one. A <b>function</b> lets us write the code <b>once</b>, give it a name, and <b>call</b> it whenever we need it.</div></details>
+        </div>
+        <div class="panel"><h3>The same idea as a function</h3>
+          ${code(`def show_score(score):
+    print("-----------")
+    print("  SCORE:", score)
+    print("-----------")
+
+show_score(10)
+show_score(25)
+show_score(40)`)}
+          <div class="legend">
+            <div><b>def</b>defines (creates) a function</div>
+            <div><b>show_score</b>the function's name</div>
+            <div><b>score</b>a parameter: a value the function needs</div>
+            <div><b>show_score(10)</b>a call with the argument 10</div>
+          </div>
+        </div>
+      </div>
+      <div class="panel"><h3>By the end of this lesson I can…</h3>
+        <ul class="obj">
+          <li>define a function using <code>def</code> and call it by its name</li>
+          <li>explain the difference between a parameter and an argument</li>
+          <li>use <code>return</code> to send a value back from a function</li>
+          <li>say whether a variable is global or local</li>
+        </ul></div>
+      <div data-vote="q-why"></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Give pairs 60 seconds of <b>think–pair–share</b> before showing the answer. Pair talk comes before writing, because many students find reading harder than speaking.</li>
+        <li>Open <b>Key words</b> and go through <i>parameter / argument / return</i> with the Korean translations.</li>
+        <li>The lesson follows PRIMM (the dashed stages): Predict → Run → Investigate → Modify → Make.</li></ul></div>`},
+
+    {key:'predict', label:'Predict', primm:true, html:`
+      <div class="stage-head"><div><div class="eyebrow">PRIMM · Predict</div><h2 id="h-predict">What will this program print?</h2></div>
+      <p class="lead">Don't run it yet. Talk to your partner and agree on a prediction.</p></div>
+      <div class="cols">
+        <div class="panel">${code(AREA)}
+          <p data-show="support" class="small"><span class="tier support">Support</span>Start at line 5. That is the first line that <i>does</i> something. Lines 1–3 only create the function.</p>
+          <p data-show="core" class="small"><span class="tier core">Core</span>Follow the values: which number goes into <code>length</code>, and which into <code>width</code>?</p>
+          <p data-show="stretch" class="small"><span class="tier stretch">Stretch</span>How many times does line 2 run in total? What if line 3 was deleted?</p>
+        </div>
+        <div data-vote="predict"></div>
+      </div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>1 minute of silent thinking, then pairs. Students vote on their devices, or hands up and you tap the options. <b>Nobody sees the tallies</b> until you press Reveal, so nobody copies the majority. Use <b>Peek</b> if you want to see the split first, but remember it shows on the projector.</li>
+        <li>Common misconceptions: option B (students think <code>return result</code> prints the word "result") and option C (they think nothing happens because the function is "just defined").</li></ul></div>`},
+
+    {key:'run', label:'Run', primm:true, html:`
+      <div class="stage-head"><div><div class="eyebrow">PRIMM · Run</div><h2 id="h-run">Run it. Was your prediction right?</h2></div>
+      <p class="lead">Run the code, then step through it line by line to see <i>why</i> it prints what it does.</p></div>
+      <div id="traceHost"></div>
+      <div data-vote="q-run"></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Compare the class vote on the Predict stage with the real output.</li>
+        <li>Step through with the class. Before each click, ask "Which line will Python go to next?" Mini whiteboards work well.</li>
+        <li>Key points: the definition doesn't run on its own; arguments are copied into parameters; local variables disappear after <code>return</code>.</li>
+        <li>Expected output: <code>Room: 12</code> / <code>Desk: 2</code>.</li></ul></div>`},
+
+    {key:'investigate', label:'Investigate', primm:true, html:`
+      <div class="stage-head"><div><div class="eyebrow">PRIMM · Investigate</div><h2 id="h-investigate">Investigate: how does it work?</h2></div>
+      <p class="lead">Answer the questions for your level. Test your ideas by changing the code and running it.</p></div>
+      <div class="cols">
+        <div class="panel"><ul class="qs">${QS.map(([lv,q,a])=>`<li data-show="${lv}"><details class="q"><summary><span class="tier ${lv}">${lv}</span><span>${q}</span></summary><div class="ans">${a}</div></details></li>`).join('')}</ul>
+          <p class="small muted">Change the level (Support, Core or Stretch) at the top to see different questions.</p></div>
+        <div class="panel"><h3>Test your ideas</h3><div id="invEd"></div></div>
+      </div>
+      <div class="cols"><div data-vote="t-param"></div><div data-vote="q-param"></div></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Start with the Support questions as a whole class (cold call with Pick a student), then switch level.</li>
+        <li>The typed question checks spelling of the parameter names. Spacing doesn't matter, and either order is accepted.</li>
+        <li>Ask for full sentences using the key words: "The <u>parameter</u> is… The <u>argument</u> is…".</li></ul></div>`},
+
+    {key:'scope', label:'Global vs local', html:`
+      <div class="stage-head"><div><div class="eyebrow">Scope</div><h2 id="h-scope">Global vs local variables</h2></div>
+      <p class="lead">Where a variable is created decides where it can be used. This is called its <b>scope</b>.</p></div>
+      <div class="rules2">
+        <div class="rule g"><h3>Global variable · 전역 변수</h3><p>Created in the <b>main program</b>, outside any function. It can be <b>read anywhere</b> in the program.</p><p class="small muted" style="margin-top:6px">Like the school noticeboard: everyone can read it.</p></div>
+        <div class="rule l"><h3>Local variable · 지역 변수</h3><p>Created <b>inside a function</b>, including its parameters. It only exists <b>while the function runs</b> and disappears after <code>return</code>.</p><p class="small muted" style="margin-top:6px">Like notes on your own desk: they're cleared at the end of the lesson.</p></div>
+      </div>
+      <div class="cols">
+        <div class="panel" id="scopePanel">
+          <div class="bar" style="justify-content:space-between"><div class="scopekey"><span class="chip g">global · main program</span><span class="chip l">local · inside add_bonus()</span></div><button class="btn" id="scopeToggle" aria-pressed="true">Hide colours</button></div>
+          ${L.scopeCode(SCOPE_SRC, 'scopeCode', [3,4,5], scopeVC)}
+          <p class="small muted">Solid underline = global. Dotted underline = local. Wavy red = the error on line 9.</p>
+          <div class="bar"><button class="btn primary" id="scopeRun">▶ Run it</button></div>
+          <pre class="out" id="scopeOut" hidden></pre>
+        </div>
+        <div class="panel"><h3>Sort the variables</h3>
+          <p class="small">Decide whether each variable is <b style="color:var(--glob)">global</b> or <b style="color:var(--loc)">local</b>, then check.</p>
+          <p data-show="support" class="small"><span class="tier support">Support</span>Ask: <i>was it created inside the <code>def</code> block (indented), or outside?</i> Parameters count as inside.</p>
+          <p data-show="stretch" class="small"><span class="tier stretch">Stretch</span>There is an extra name to sort. Be ready to explain it.</p>
+          <div id="sortHost"></div>
+        </div>
+      </div>
+      <div class="cols"><div data-vote="q-scope1"></div><div data-vote="t-scope"></div></div>
+      <div class="cols">
+        <div class="panel"><h3>Challenge: same name, different scope</h3>
+          ${L.scopeCode(SHADOW_SRC, 'shadowCode', [3,4,5], shadowVC)}
+          <details class="q"><summary>Why?</summary><div class="ans"><code>x = 99</code> inside the function makes a <b>new local</b> <code>x</code>. The global <code>x</code> is not changed, so the last line prints <code>outside: 10</code>. Good practice is to pass values in as parameters and send results back with <code>return</code>, rather than relying on global variables.</div></details>
+          <div class="bar"><button class="btn primary" id="shadowRun">▶ Run it</button></div>
+          <pre class="out" id="shadowOut" hidden></pre>
+        </div>
+        <div data-vote="q-scope2"></div>
+      </div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Use the noticeboard / desk analogy. Point at the coloured bars: the orange block is the function's "desk".</li>
+        <li>Try <b>Hide colours</b> first and ask students to spot the global and local variables, then show the colours to check.</li>
+        <li>Common misconception: students think <code>total</code> still exists after the function has run (line 9). Run it to show the NameError.</li>
+        <li>Link back to the Run stage: the blue table is global, the orange table is local and empties after <code>return</code>.</li></ul></div>`},
+
+    {key:'annotate', label:'Annotate code', html:`
+      <div class="stage-head"><div><div class="eyebrow">Annotate code</div><h2 id="h-annotate">Match each annotation to its line of code</h2></div>
+      <p class="lead">Tap an annotation, then tap the line it describes. Discuss with your partner before you place each one.</p></div>
+      <p data-show="support"><span class="tier support">Support</span>Two lines are done for you. Use the <b>Key words</b> button if you get stuck.</p>
+      <p data-show="core"><span class="tier core">Core</span>Match all six annotations. Blank line 5 does not need one.</p>
+      <p data-show="stretch"><span class="tier stretch">Stretch</span>These annotations use technical vocabulary, and <b>two of them don't match any line</b>. Leave those in the bank and explain why they're wrong.</p>
+      <div id="annHost"></div>
+      <div class="panel"><h3>Now you try: annotate with comments</h3>
+        <p>In Python, annotations are written as <b>comments</b> that start with <code>#</code>. Python ignores them, but they help people understand your code. Add a comment to each line, then run it to check the program still works.</p>
+        <div id="annEd"></div></div>
+      <div data-vote="c-annotate"></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>At the front: pick a student to choose an annotation, then ask the class "Which line? Thumbs up if you agree." Ask what words in the code gave it away.</li>
+        <li>This checks reading of both English and code, so it suits low reading levels. Pre-teach <i>local variable</i>, <i>arguments</i> and <i>calls</i>.</li>
+        <li>Stretch distractors: nothing asks for input, and nothing repeats. Expected output: <code>Average: 73.0</code>.</li></ul></div>`},
+
+    {key:'parsons', label:'Parsons problem', html:`
+      <div class="stage-head"><div><div class="eyebrow">Parsons problem</div><h2 id="h-parsons">Put the lines in the right order</h2></div>
+      <p class="lead">Build a program that converts 30 °C to Fahrenheit using a function. Tap a line to add it to your program.</p></div>
+      <p data-show="support"><span class="tier support">Support</span>The indentation has been done for you. Only the order matters. Remember: define the function <b>before</b> you call it.</p>
+      <p data-show="core"><span class="tier core">Core</span>Put the lines in order <b>and</b> set the indentation with ⇤ and ⇥.</p>
+      <p data-show="stretch"><span class="tier stretch">Stretch</span>Order and indent the lines. <b>Two lines are not needed.</b> Leave them in the bank and explain why they're wrong.</p>
+      <div id="parsonsHost"></div>
+      <div data-vote="c-parsons"></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Do this at the front: a pair says which line comes next, you tap it, and the class agrees or challenges.</li>
+        <li>Stretch distractors: <code>return celsius</code> (wrong value) and <code>print(fahrenheit)</code> (NameError, because fahrenheit is local).</li>
+        <li>Expected output: <code>30 C is 86.0 F</code>. Ask why 86.0 and not 86 (because <code>/</code> always gives a float).</li></ul></div>`},
+
+    {key:'gaps', label:'Fill the gaps', html:`
+      <div class="stage-head"><div><div class="eyebrow">Fill the gaps</div><h2 id="h-gaps">Complete the shop receipt function</h2></div>
+      <p class="lead">The function works out the cost of buying several of the same item. Fill in the missing parts.</p></div>
+      <div class="cols">
+        <div class="panel" id="gapsHost"></div>
+        <div class="panel"><h3>Think about it</h3>
+          <ul class="qs">
+            <li><details class="q"><summary>Which words are the parameters, and which values are the arguments?</summary><div class="ans">The parameters are <code>price</code> and <code>quantity</code>. The arguments are <code>4500</code> and <code>3</code>.</div></details></li>
+            <li data-show="stretch"><details class="q"><summary><span class="tier stretch">Stretch</span>Add a second call that prints the total for 2 drinks at 1200 won, without changing the function.</summary><div class="ans"><code>print("Drinks:", total_price(1200, 2), "won")</code> prints <code>Drinks: 2400 won</code>. The function is reused, which is why we write functions.</div></details></li>
+          </ul>
+        </div>
+      </div>
+      <div class="cols"><div data-vote="t-print"></div><div data-vote="q-gaps"></div></div>
+      <div data-vote="c-gaps"></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Answers: <code>def</code>, <code>quantity</code>, <code>*</code>, <code>return</code>, <code>total_price</code>.</li>
+        <li>Pick a student to choose a gap and give its word, then ask the class "Agree or disagree? Why?".</li>
+        <li>The typed question accepts <code>Total: 13500 won</code> or just <code>13500</code>. Use the response cards to show near misses.</li></ul></div>`},
+
+    {key:'modify', label:'Modify', primm:true, html:`
+      <div class="stage-head"><div><div class="eyebrow">PRIMM · Modify</div><h2 id="h-modify">Change the code to do something new</h2></div>
+      <p class="lead">Start from the working <code>area</code> function. Make your change, run it, then press <b>Check my code</b>.</p></div>
+      <div class="cols">
+        <div class="panel">
+          <div data-show="support"><h3><span class="tier support">Support</span>Perimeter</h3>
+            <ol><li>Rename the function to <code>perimeter</code>.</li><li>Change line 2 to <code>result = 2 * length + 2 * width</code>.</li><li>Change the print to call <code>perimeter(5, 2)</code>. The output should be 14.</li></ol></div>
+          <div data-show="core"><h3><span class="tier core">Core</span>Volume of a box</h3>
+            <p>Change the function to <code>volume(length, width, height)</code> so it returns the volume of a box.</p>
+            <p class="small muted">Test: <code>volume(2, 3, 4)</code> should give 24. You need to add a parameter <i>and</i> an argument.</p></div>
+          <div data-show="stretch"><h3><span class="tier stretch">Stretch</span>Two answers and a default</h3>
+            <ol><li>Write <code>area_and_perimeter(length, width)</code> that returns <b>both</b> values: <code>return a, p</code>.</li>
+            <li>Write <code>rectangle(length, width=1)</code>. The <code>=1</code> is a default value, so <code>rectangle(5)</code> returns 5.</li>
+            <li>Print a sentence using both results.</li></ol></div>
+        </div>
+        <div class="panel"><div id="modEd"></div></div>
+      </div>
+      <div data-vote="c-modify"></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>All three tasks change the same starting code, so the class can compare solutions at the end.</li>
+        <li><b>Check my code</b> uses the tests for the level currently selected.</li>
+        <li>Plenary idea: show one Support, one Core and one Stretch solution side by side. "What stayed the same? What changed?"</li></ul></div>`},
+
+    {key:'make', label:'Make', primm:true, html:`
+      <div class="stage-head"><div><div class="eyebrow">PRIMM · Make</div><h2 id="h-make">Make: the snack shop receipt</h2></div>
+      <p class="lead">The school shop needs a program to work out what customers pay. Write the functions, then press <b>Check my code</b>.</p></div>
+      <div data-vote="t-def"></div>
+      <div class="cols">
+        <div class="panel"><h3>The brief</h3>
+          <ul>
+            <li><code>item_cost(price, quantity)</code> returns price × quantity.</li>
+            <li><code>add_service(total)</code> returns the total plus 10%.</li>
+            <li data-show="stretch"><code>apply_discount(total, percent=0)</code> returns the total minus <i>percent</i>%. It should work even without a percent.</li>
+          </ul>
+          <p data-show="support"><span class="tier support">Support</span>The skeleton is done for you. Write one <code>return</code> line in each function. Hint: 10% of the total is <code>total * 10 / 100</code>.</p>
+          <p data-show="core"><span class="tier core">Core</span>You have the function names. Write the bodies, then call them and print the results.</p>
+          <p data-show="stretch"><span class="tier stretch">Stretch</span>Blank page. Also print a receipt where every line is made by calling a function. Extension: <code>round()</code> the final price to the nearest 10 won.</p>
+          <p class="small muted">Changing the level loads that level's starting code. Save your work first if you want to keep it.</p>
+        </div>
+        <div class="panel"><div id="makeEd"></div></div>
+      </div>
+      <div data-vote="c-make"></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Open the typed question first: everyone types a <code>def</code> line before they start, so you can spot missing colons and brackets straight away.</li>
+        <li>Suggested time is 12–15 minutes. Use the timer, and check in with the Support group in the first 3 minutes.</li>
+        <li>Model solution: <code>return price * quantity</code> · <code>return total + total * 10 / 100</code> · <code>return total - total * percent / 100</code>.</li></ul></div>`},
+
+    {key:'exit', label:'Exit ticket', html:`
+      <div class="stage-head"><div><div class="eyebrow">Exit ticket</div><h2 id="h-exit">Check your understanding</h2></div>
+      <p class="lead">Answer on your device or on mini whiteboards. Nobody sees the results until you reveal them.</p></div>
+      <div data-vote="ex1"></div>
+      <div data-vote="ex2"></div>
+      <div data-vote="ex3"></div>
+      <div data-vote="conf"></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Question 3 is the hardest: the inner <code>double(3)</code> runs first and returns 6, then <code>double(6)</code> returns 12.</li>
+        <li>Open <b>Results</b> at the end and use <b>Copy summary</b> for your records. Note who answered question 2 wrongly (parameter vs argument) and start next lesson with a retrieval question on it.</li></ul></div>`}
+  ],
+
+  ready(){
+    /* Run: trace */
+    L.trace('#traceHost', {
+      code: AREA, localLines:[1,2,3], vc: areaVC, localLabel:'inside area()',
+      steps: [
+        {l:1, say:'Python reads the <b>definition</b> and remembers the function <code>area</code>. Nothing inside it runs yet.', g:{}, loc:null, out:''},
+        {l:5, say:'The function is <b>called</b> with the arguments <code>4</code> and <code>3</code>. Python jumps up to the function.', g:{}, loc:{length:4,width:3}, out:'', nw:['length','width']},
+        {l:2, say:'<code>result = 4 * 3</code>, so <code>result</code> is <b>12</b>. It is a <b>local variable</b>, so it only exists inside the function.', g:{}, loc:{length:4,width:3,result:12}, out:'', nw:['result']},
+        {l:3, say:'<code>return</code> sends <b>12</b> back to the line that called the function.', g:{}, loc:{length:4,width:3,result:12}, out:''},
+        {l:5, say:'The call <code>area(4, 3)</code> is replaced by 12, so <code>room = 12</code>. The local variables have now gone.', g:{room:12}, loc:null, out:'', nw:['room']},
+        {l:6, say:'This prints the text and the value of <code>room</code>.', g:{room:12}, loc:null, out:'Room: 12'},
+        {l:7, say:'A second call, <code>area(2, 1)</code>, happens <i>inside</i> the print. Python jumps back to the function with new arguments.', g:{room:12}, loc:{length:2,width:1}, out:'Room: 12', nw:['length','width']},
+        {l:2, say:'<code>result = 2 * 1</code>, so <code>result</code> is <b>2</b>.', g:{room:12}, loc:{length:2,width:1,result:2}, out:'Room: 12', nw:['result']},
+        {l:3, say:'<code>return</code> sends <b>2</b> back to line 7.', g:{room:12}, loc:{length:2,width:1,result:2}, out:'Room: 12'},
+        {l:7, say:'The print shows "Desk:" and the returned value, 2. The program has finished.', g:{room:12}, loc:null, out:'Room: 12\nDesk: 2'}
+      ]});
+
+    /* Investigate: editor */
+    L.editor('#invEd', AREA, {id:'invCode'});
+
+    /* Scope */
+    L.sorter('#sortHost', {cats:[{id:'g',label:'Global'},{id:'l',label:'Local'}], items:[
+      {name:'bonus', cat:'g', why:'Global: created in the main program (line 1), so it can be read anywhere, even inside the function.'},
+      {name:'score', cat:'l', why:'Local: it is a parameter. Parameters only exist inside their function.'},
+      {name:'total', cat:'l', why:'Local: created inside the function (line 4) and gone after return. That is why line 9 fails.'},
+      {name:'result', cat:'g', why:'Global: created in the main program (line 7).'},
+      {name:'add_bonus', cat:'g', why:'Global: the function name itself is defined in the main program.', lv:'stretch'}
+    ]});
+    L.$('#scopeToggle').onclick = () => { const b = L.$('#scopeToggle'); const on = b.getAttribute('aria-pressed') !== 'true';
+      b.setAttribute('aria-pressed', on); b.textContent = on ? 'Hide colours' : 'Show colours'; L.$('#st-scope').classList.toggle('noscope', !on); };
+    L.$('#scopeRun').onclick = async () => { const o = L.$('#scopeOut'); o.hidden = false; o.textContent = 'Running…'; L.showResult(o, await L.run(SCOPE_SRC)); };
+    L.$('#shadowRun').onclick = async () => { const o = L.$('#shadowOut'); o.hidden = false; o.textContent = 'Running…'; L.showResult(o, await L.run(SHADOW_SRC)); };
+
+    /* Annotate */
+    L.annotate('#annHost', {
+      code: ANN_CODE, given:[1,7],
+      items: [
+        {line:1, text:'Defines a function called <b>average</b> with three parameters', lv:['support','core']},
+        {line:2, text:'Creates a <b>local variable</b> that adds the three values together', lv:['core']},
+        {line:3, text:'Divides the total by 3 to work out the mean', lv:['support','core']},
+        {line:4, text:'Sends the answer back to where the function was called', lv:['support','core']},
+        {line:6, text:'<b>Calls</b> the function with three arguments and stores the answer', lv:['core']},
+        {line:7, text:'Displays the answer rounded to 1 decimal place', lv:['support','core']}
+      ],
+      stretch: [
+        {line:1, text:'The <b>header</b>: keyword, identifier and parameter list'},
+        {line:2, text:'Assigns the sum of the <b>parameters</b> to a local variable'},
+        {line:3, text:'Arithmetic that produces a <b>float</b>'},
+        {line:4, text:'Ends the function and passes a value back to the caller'},
+        {line:6, text:'A function call with three <b>arguments</b>; the return value is assigned'},
+        {line:7, text:'Outputs a string and a value rounded by a built-in function'}
+      ],
+      distract: [{text:'Asks the user to type in a number'},{text:'Repeats the code inside the function three times'}]
+    });
+    L.editor('#annEd', `def average(a, b, c):   #
+    total = a + b + c   #
+    mean = total / 3   #
+    return mean   #
+
+score = average(70, 85, 64)   #
+print("Average:", round(score, 1))   # `, {id:'annCode'});
+
+    /* Parsons */
+    L.parsons('#parsonsHost', {
+      lines: [
+        {id:'a', t:'def to_fahrenheit(celsius):', ind:0},
+        {id:'b', t:'fahrenheit = celsius * 9 / 5 + 32', ind:1},
+        {id:'c', t:'return fahrenheit', ind:1},
+        {id:'d', t:'temp = to_fahrenheit(30)', ind:0},
+        {id:'e', t:'print("30 C is", temp, "F")', ind:0}],
+      distract: [{id:'x', t:'return celsius', ind:1},{id:'y', t:'print(fahrenheit)', ind:0}],
+      order: ['a','b','c','d','e']});
+
+    /* Fill the gaps */
+    L.gaps('#gapsHost', {
+      template: `__G0__ total_price(price, __G1__):
+    cost = price __G2__ quantity
+    __G3__ cost
+
+bill = __G4__(4500, 3)
+print("Total:", bill, "won")`,
+      gaps: [
+        {a:'def', hint:'The keyword that defines a function.'},
+        {a:'quantity', hint:'Look at line 2. Which variable is used but not yet a parameter?'},
+        {a:'*', hint:'Price and quantity need to be multiplied.'},
+        {a:'return', hint:'The keyword that sends a value back.'},
+        {a:'total_price', hint:'Call the function using its name.'}],
+      bank: ['def','quantity','*','return','total_price','print','+','price'],
+      build: v => `${v[0]} total_price(price, ${v[1]}):\n    cost = price ${v[2]} quantity\n    ${v[3]} cost\n\nbill = ${v[4]}(4500, 3)\nprint("Total:", bill, "won")`});
+
+    /* Modify + Make */
+    L.editor('#modEd', MOD_START, {id:'modCode', tests: () => MOD_TESTS[document.body.dataset.level]});
+    const makeEd = L.editor('#makeEd', MAKE_START.core, {id:'makeCode', tests: () => MAKE_TESTS[document.body.dataset.level]});
+    L.onLevel(lv => makeEd.set(MAKE_START[lv]));
+  }
+});
+</script>
+</body>
+</html>

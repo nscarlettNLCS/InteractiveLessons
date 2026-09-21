@@ -1,0 +1,24 @@
+{
+  "rules": {
+    "rooms": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.child('owner').val() === auth.uid) || data.child('owner').val() === auth.uid)",
+        "joined": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('rooms').child($code).child('owner').exists()",
+            ".validate": "newData.isBoolean()"
+          }
+        },
+        "votes": {
+          "$q": {
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && root.child('rooms').child($code).child('open').val() === true && root.child('rooms').child($code).child('active').val() === $q",
+              ".validate": "(newData.isNumber() && newData.val() >= 0 && newData.val() < 6) || (newData.isString() && newData.val().length > 0 && newData.val().length <= 120)"
+            }
+          }
+        }
+      }
+    }
+  }
+}
