@@ -384,3 +384,9 @@ body.present .dock:hover, body.present .dock:focus-within, body.present .dock.wa
 .parsons > *, .zone > *, .pline .txt{min-width:0}
 .annot > *, .arow > *{min-width:0}
 a.tbtn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
+.inbox{display:grid;gap:4px;font-weight:700;font-size:.9rem}
+.inbox small{font-weight:400;color:var(--muted)}
+.inbox input{font-family:var(--mono);font-size:1rem;border:2px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface-2);color:var(--ink)}
+.sortrow.plain{grid-template-columns:minmax(0,1.4fr) auto minmax(0,1fr)}
+.sortrow .sname{font-weight:700}
+@media (max-width:560px){.sortrow.plain{grid-template-columns:1fr auto}}

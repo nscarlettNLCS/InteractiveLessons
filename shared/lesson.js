@@ -57,18 +57,26 @@ function friendly(err){
   if(/SyntaxError/.test(err)) return 'Check for a missing colon after def, missing brackets or quotes, or a line inside the function that needs 4 spaces of indentation.';
   if(/TypeError.*argument/i.test(err)) return 'The number of arguments in the call doesn\'t match the number of parameters.';
   if(/TypeError/.test(err)) return 'You may be mixing text and numbers, for example "5" + 5.';
-  if(/TimeLimit|time limit/i.test(err)) return 'The program ran for too long. Is there a loop that never ends?';
+  if(/TimeLimit|time limit|too long/i.test(err)) return 'The program ran for too long. Is there a loop that never ends? Check the loop variable changes each time.';
+  if(/No more inputs/.test(err)) return 'Your loop asked for more inputs than there are in the Inputs box. Is the loop stopping when it should?';
+  if(/invalid literal for int/.test(err)) return 'int() can only turn digits into a number. Check the Inputs box.';
   return '';
 }
-function runPython(code){
+function runPython(code, inputs){
   return new Promise(resolve => {
     if(!window.Sk){ resolve({ok:false, out:'', err:'The Python runner could not load. Check the internet connection.'}); return; }
-    let out = '';
+    let out = '', lines = 0;
+    const queue = Array.isArray(inputs) ? inputs.slice() : null;
     Sk.configure({
-      output: t => { out += t; },
+      output: t => { if(lines > 2000) return; out += t; lines += (t.match(/\n/g)||[]).length; if(lines > 2000) out += '\n… (output stopped after 2000 lines)\n'; },
       read: x => { if(Sk.builtinFiles === undefined || Sk.builtinFiles.files[x] === undefined) throw "File not found: '"+x+"'"; return Sk.builtinFiles.files[x]; },
-      __future__: Sk.python3, execLimit: 4000,
-      inputfun: () => { throw new Sk.builtin.Exception('input() is not used here — give the function arguments instead.'); }
+      __future__: Sk.python3, execLimit: 3000, yieldLimit: 100,
+      inputfunTakesPrompt: false,
+      inputfun: () => {
+        if(!queue) throw new Sk.builtin.RuntimeError('input() is not used here — give the function arguments instead.');
+        if(!queue.length) throw new Sk.builtin.RuntimeError('No more inputs. Add another value to the Inputs box.');
+        const v = String(queue.shift()); out += v + '\n'; return v;
+      }
     });
     Sk.misceval.asyncToPromise(() => Sk.importMainWithBody('<stdin>', false, code, true))
       .then(() => resolve({ok:true, out}), e => resolve({ok:false, out, err:String(e)}));
@@ -100,10 +108,12 @@ function editor(sel, start, opts){
   const h = host(sel); opts = opts || {};
   h.innerHTML = `
     <div class="editor"><div class="gutter" aria-hidden="true"></div><textarea spellcheck="false" autocapitalize="off" autocomplete="off"${opts.id?` id="${opts.id}"`:''} aria-label="Python code editor"></textarea></div>
+    ${opts.inputs !== undefined ? `<label class="inbox"><span>⌨ Inputs <small>typed in order, separated by commas</small></span><input class="inputs" value="${esc(opts.inputs)}" spellcheck="false" autocomplete="off"></label>` : ''}
     <div class="bar"><button class="btn primary run">▶ Run</button>${opts.tests?'<button class="btn mark check">✓ Check my code</button>':''}<button class="btn reset">Reset code</button><span class="status"></span></div>
     <div class="out-label">Output</div><pre class="out" aria-live="polite"></pre>
     ${opts.tests?'<ul class="tests" aria-live="polite"></ul>':''}`;
   const ta = $('textarea', h), gut = $('.gutter', h), pre = $('pre', h), st = $('.status', h);
+  const inputList = () => { const i = $('.inputs', h); return i ? i.value.split(',').map(x => x.trim()).filter(x => x !== '') : null; };
   let original = start;
   const sync = () => { const n = ta.value.split('\n').length; gut.textContent = Array.from({length:n},(_,i)=>i+1).join('\n'); gut.scrollTop = ta.scrollTop; };
   ta.value = start; sync();
@@ -117,12 +127,17 @@ function editor(sel, start, opts){
     st.textContent = 'Running…';
     const t = withTests && opts.tests ? opts.tests() : null;
     const exprT = t ? t.filter(x => x.expr) : [];
-    const r = await runPython(ta.value + (exprT.length ? testCode(exprT) : ''));
+    const r = await runPython(ta.value + (exprT.length ? testCode(exprT) : ''), inputList());
     let res = showResult(pre, r); st.textContent = '';
     if(t){ const ul = $('.tests', h);
-      if(!r.ok){ ul.innerHTML = '<li class="fail">Fix the error first, then check again.</li>'; return; }
+      if(!r.ok && !t.some(x => x.inputs)){ ul.innerHTML = '<li class="fail">Fix the error first, then check again.</li>'; return; }
       const printed = outText(r.out);
-      res = res.concat(t.filter(x => !x.expr).map(x => ({name:x.label, pass: outCheck(printed, x)})));
+      for(const x of t.filter(x => !x.expr)){
+        if(x.inputs){ st.textContent = 'Checking…'; const rr = await runPython(ta.value, x.inputs);
+          res.push({name: x.label + (x.inputs.length ? `  (inputs: ${x.inputs.join(', ')})` : ''), pass: rr.ok && outCheck(outText(rr.out), x)}); }
+        else res.push({name:x.label, pass: r.ok && outCheck(printed, x)});
+      }
+      st.textContent = '';
       ul.innerHTML = res.map(x => `<li class="${x.pass?'pass':'fail'}">${x.pass?'✓':'✗'} ${esc(x.name)}</li>`).join('');
       if(res.length && res.every(x => x.pass)) ul.insertAdjacentHTML('beforeend', '<li class="pass">All tests passed.</li>');
     }
@@ -429,7 +444,7 @@ function sorter(sel, cfg){
   function setup(){
     const lv = document.body.dataset.level;
     const items = cfg.items.filter(x => !x.lv || x.lv === lv);
-    $('.srows', h).innerHTML = items.map(x => `<div class="sortrow" data-n="${esc(x.name)}"><code>${esc(x.name)}</code><div class="seg" role="group" aria-label="Category for ${esc(x.name)}">${cfg.cats.map(c=>`<button data-s="${c.id}" aria-pressed="false">${esc(c.label)}</button>`).join('')}</div><span class="why"></span></div>`).join('');
+    $('.srows', h).innerHTML = items.map(x => `<div class="sortrow${cfg.plain?' plain':''}" data-n="${esc(x.name)}">${cfg.plain?`<span class="sname">${esc(x.name)}</span>`:`<code>${esc(x.name)}</code>`}<div class="seg" role="group" aria-label="Category for ${esc(x.name)}">${cfg.cats.map(c=>`<button data-s="${c.id}" aria-pressed="false">${esc(c.label)}</button>`).join('')}</div><span class="why"></span></div>`).join('');
     $$('.srows .seg button', h).forEach(b => b.onclick = () => { $$('button', b.parentElement).forEach(x => x.setAttribute('aria-pressed', x === b)); const r = b.closest('.sortrow'); r.classList.remove('ok','bad'); $('.why', r).textContent = ''; });
     $('.sfb', h).innerHTML = '';
   }
