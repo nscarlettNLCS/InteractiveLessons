@@ -588,7 +588,7 @@ const Live = (() => {
   const st = {on:false, code:'', db:null, uid:'', active:'', open:false, joined:0, refs:[]};
   const cfgOK = () => !!(window.firebase && window.FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey && !/PASTE/i.test(FIREBASE_CONFIG.apiKey) && FIREBASE_CONFIG.databaseURL);
   const body = () => $('#liveBody');
-  const joinURL = () => ROOT + 'vote.html?room=' + st.code;
+  const joinURL = () => new URL(ROOT.replace(/\/?$/, '/') + 'vote.html', location.href).href.split(/[?#]/)[0] + '?room=' + st.code;
   function panel(msg){
     if(!cfgOK()){ body().innerHTML = '<p class="lmsg">Live answering isn\'t set up on this copy. Follow README.md to connect a free Firebase project. You can still count hands by tapping the options.</p>'; return; }
     if(!st.on){
