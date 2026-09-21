@@ -75,10 +75,35 @@ pre{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);bord
 .small{font-size:.85rem;color:var(--muted);text-align:center}
 .tally{display:flex;justify-content:center;gap:8px;align-items:baseline;font-weight:700}
 .tally b{font-family:var(--display);font-size:1.6rem;color:var(--accent);font-variant-numeric:tabular-nums}
+
+/* ---- code task (laptops) ---- */
+.wrap.wide{max-width:980px}
+.ctask{display:grid;gap:10px}
+.ed{display:grid;grid-template-columns:3em 1fr;background:var(--code-bg);border-radius:12px;overflow:hidden}
+.ed:focus-within{outline:3px solid var(--mark);outline-offset:2px}
+.ed .gut{font-family:var(--mono);color:#7E949A;text-align:right;padding:12px 12px 12px 0;line-height:1.7;font-size:1rem;white-space:pre;overflow:hidden;user-select:none}
+.ed textarea{background:transparent;color:var(--code-ink);border:0;resize:vertical;font-family:var(--mono);font-size:1rem;line-height:1.7;padding:12px 14px 12px 4px;min-height:15em;white-space:pre;overflow:auto;tab-size:4;outline:none;caret-color:var(--mark);width:100%}
+.inbox{display:grid;gap:4px;font-weight:700}
+.inbox small{font-weight:400;color:var(--muted)}
+.inbox input{border:2px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--surface-2);font-family:var(--mono)}
+.cbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.cbar .btn{padding:10px 16px;font-size:1rem}
+.btn.ghost{background:var(--surface-2);color:var(--ink);border:2px solid var(--line)}
+.btn.send{background:var(--good);color:#fff}
+.olab{font-weight:700;font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+#cOut{min-height:3.2em;white-space:pre-wrap;word-break:break-word}
+#cOut .e{color:#F2877F}
+#cOut .h{display:block;color:var(--mark);margin-top:6px;font-family:var(--body)}
+.tests{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.tests li{border-radius:8px;padding:6px 10px;font-weight:700}
+.tests li.pass{background:var(--good-soft);color:var(--good)}
+.tests li.fail{background:var(--bad-soft);color:var(--bad)}
+.hintbox{background:var(--mark-soft);border-radius:10px;padding:8px 12px}
+#qModel{white-space:pre}
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="wrap" id="wrap">
   <header><b>Class answers</b><span class="hdr"><span class="score" id="scoreTag" hidden></span><span class="room" id="roomTag" hidden></span></span></header>
 
   <section class="card" id="join">
@@ -107,7 +132,16 @@ pre{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);bord
       <input id="qInput" maxlength="120" autocomplete="off" autocapitalize="off" spellcheck="false">
       <button class="btn" id="qSend">Send answer</button>
     </div>
+    <div class="ctask" id="qCodeTask" hidden>
+      <p class="hintbox" id="cHint" hidden></p>
+      <div class="ed"><div class="gut" id="cGut" aria-hidden="true"></div><textarea id="cCode" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Python code editor"></textarea></div>
+      <label class="inbox" id="cInBox" hidden><span>⌨ Inputs <small>typed in order, separated by commas</small></span><input id="cIn" spellcheck="false" autocomplete="off"></label>
+      <div class="cbar"><button class="btn" id="cRun">▶ Run</button><button class="btn ghost" id="cCheck">✓ Check my code</button><button class="btn send" id="cSend">Send to teacher</button><button class="btn ghost" id="cReset">Start again</button></div>
+      <div class="olab">Output</div><pre id="cOut" aria-live="polite"></pre>
+      <ul class="tests" id="cTests" aria-live="polite"></ul>
+    </div>
     <div class="sent" id="qSent" hidden></div>
+    <div id="qModelBox" hidden><div class="olab">Model answer</div><pre id="qModel"></pre></div>
     <div class="answerkey" id="qKey" hidden></div>
     <div class="tally" id="qTally" hidden></div>
     <p class="status" id="qStatus" aria-live="polite"></p>
@@ -163,6 +197,7 @@ function myScore(){
   ids.forEach(q => {
     const a = ans[q], mine = room.votes && room.votes[q] ? room.votes[q][uid] : undefined;
     const key = (typeof a === 'number') ? {c:a} : a;
+    if(key && key.code){ if(!key.marked) return; marked++; if(passedAll(mine)) right++; return; }
     if(!key || (key.c === undefined && !key.a)) return;
     marked++;
     if(mine === undefined) return;
@@ -185,15 +220,25 @@ function render(){
   const key = room.answers && room.answers[active];
   const keyObj = (typeof key === 'number') ? {c:key} : key;
 
-  if(!room.open && mine === undefined && !revealed){ show('waiting'); $('#waitTitle').textContent = 'Answering is closed'; $('#waitKo').textContent = '다음 질문을 기다려 주세요'; return; }
+  const isCode = q.type === 'code';
+  $('#wrap').classList.toggle('wide', isCode);
+  if(!isCode && !room.open && mine === undefined && !revealed){ show('waiting'); $('#waitTitle').textContent = 'Answering is closed'; $('#waitKo').textContent = '다음 질문을 기다려 주세요'; return; }
   show('question');
   $('#qTitle').textContent = q.title;
   $('#qCode').hidden = !q.code; $('#qCode').textContent = q.code || '';
 
   const isText = q.type === 'text';
-  $('#qOpts').hidden = isText; $('#qTyped').hidden = !isText;
+  $('#qOpts').hidden = isText || isCode; $('#qTyped').hidden = !isText; $('#qCodeTask').hidden = !isCode;
+  $('#qModelBox').hidden = !(isCode && revealed && keyObj && keyObj.model);
+  if(isCode && revealed && keyObj && keyObj.model) $('#qModel').textContent = keyObj.model;
 
-  if(isText){
+  if(isCode){
+    setupCode(active, q);
+    $('#cSend').disabled = !room.open || sending;
+    $('#cSend').textContent = mine === undefined ? 'Send to teacher' : 'Send again';
+    $('#qSent').hidden = mine === undefined;
+    $('#qSent').textContent = mine === undefined ? '' : (mine.of ? `Sent to your teacher · ${mine.pass} of ${mine.of} tests passed` : 'Sent to your teacher');
+  } else if(isText){
     const inp = $('#qInput');
     inp.classList.toggle('mono', !!q.mono);
     inp.placeholder = q.placeholder || 'Type your answer';
@@ -225,16 +270,115 @@ function render(){
   $('#qKey').hidden = !(revealed && isText && keyObj && keyObj.a);
   if(revealed && isText && keyObj && keyObj.a) $('#qKey').textContent = 'Answer: ' + keyObj.a.join('  ·  ');
 
-  const marked = keyObj && (keyObj.c !== undefined || keyObj.a);
+  const marked = keyObj && (keyObj.code ? keyObj.marked : (keyObj.c !== undefined || keyObj.a));
   let right = false;
-  if(revealed && marked && mine !== undefined) right = keyObj.c !== undefined ? mine === keyObj.c : keyObj.a.some(x => norm(x, keyObj.mono) === norm(mine, keyObj.mono));
+  if(revealed && marked && mine !== undefined) right = keyObj.code ? passedAll(mine) : keyObj.c !== undefined ? mine === keyObj.c : keyObj.a.some(x => norm(x, keyObj.mono) === norm(mine, keyObj.mono));
   $('#qResult').innerHTML = (revealed && marked && mine !== undefined)
-    ? (right ? '<div class="result good">Correct! 정답입니다!</div>' : '<div class="result bad">Not this time — check the answer above.</div>') : '';
+    ? (right ? (isCode ? '<div class="result good">All tests passed! 잘했어요!</div>' : '<div class="result good">Correct! 정답입니다!</div>') : (isCode ? '<div class="result bad">Not all tests passed yet. Compare with the model answer.</div>' : '<div class="result bad">Not this time — check the answer above.</div>')) : '';
 
-  $('#qStatus').textContent = room.open
+  $('#qStatus').textContent = isCode ? (room.open
+      ? (mine === undefined ? 'Write your code, press Run to test it, then Send to teacher. You can send again.' : 'You can keep improving it and send again.')
+      : (mine !== undefined ? 'Closed. Your program was sent. You can still run your code.' : 'Sending is closed. You can still run your code.'))
+    : room.open
     ? (mine === undefined ? (isText ? 'Type your answer and send it. You can change it until it closes.' : 'Tap your answer. You can change it until voting closes.') : 'Sent. You can still change it.')
     : (mine !== undefined ? 'Closed. Your answer was sent.' : 'Closed.');
 }
+
+/* ---------------- code task: Python in the browser (Skulpt, loaded only when needed) ---------------- */
+const SK_BASE = window.SKULPT_BASE || 'https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/';
+let skLoading = null, codeQ = '', sending = false, codeTests = [];
+const loadScript = src => new Promise((ok, bad) => { const t = document.createElement('script'); t.src = src; t.onload = ok; t.onerror = bad; document.head.appendChild(t); });
+const loadSk = () => skLoading || (skLoading = window.Sk ? Promise.resolve() : loadScript(SK_BASE + 'skulpt.min.js').then(() => loadScript(SK_BASE + 'skulpt-stdlib.js')).catch(e => { skLoading = null; throw e; }));
+const TEST = '\u00a7T\u00a7';
+function friendly(err){
+  if(/IndentationError|unexpected indent|expected an indented block/i.test(err)) return 'Check your indentation: lines inside a loop, if or function need 4 spaces.';
+  if(/NameError/.test(err)) return 'Python doesn\'t recognise a name. Check your spelling.';
+  if(/SyntaxError/.test(err)) return 'Check for a missing colon, bracket or quote.';
+  if(/TypeError/.test(err)) return 'You may be mixing text and numbers, for example "5" + 5.';
+  if(/TimeLimit|time limit|too long/i.test(err)) return 'The program ran for too long. Is there a loop that never ends?';
+  if(/No more inputs/.test(err)) return 'Your program asked for more inputs than there are in the Inputs box.';
+  if(/invalid literal for int/.test(err)) return 'int() can only turn digits into a number. Check the Inputs box.';
+  return '';
+}
+async function runPython(code, inputs){
+  try{ await loadSk(); }catch(e){ return {ok:false, out:'', err:'Python could not load. Check the internet connection.'}; }
+  return new Promise(resolve => {
+    let out = '', lines = 0; const queue = Array.isArray(inputs) ? inputs.slice() : [];
+    Sk.configure({
+      output: t => { if(lines > 2000) return; out += t; lines += (t.match(/\n/g)||[]).length; if(lines > 2000) out += '\n… (output stopped after 2000 lines)\n'; },
+      read: x => { if(Sk.builtinFiles === undefined || Sk.builtinFiles.files[x] === undefined) throw "File not found: '"+x+"'"; return Sk.builtinFiles.files[x]; },
+      __future__: Sk.python3, execLimit: 3000, yieldLimit: 100, inputfunTakesPrompt: false,
+      inputfun: () => { if(!queue.length) throw new Sk.builtin.RuntimeError('No more inputs. Add another value to the Inputs box.'); const v = String(queue.shift()); out += v + '\n'; return v; }
+    });
+    Sk.misceval.asyncToPromise(() => Sk.importMainWithBody('<stdin>', false, code, true))
+      .then(() => resolve({ok:true, out}), e => resolve({ok:false, out, err:String(e)}));
+  });
+}
+const outText = raw => raw.split('\n').filter(l => !l.startsWith(TEST)).join('\n').replace(/[ \t]+$/gm,'').trim();
+const normOut = s => String(s).replace(/\r/g,'').split('\n').map(l => l.trim().replace(/\s+/g,' ')).join('\n').trim().toLowerCase();
+function outCheck(printed, t){ const p = normOut(printed);
+  if(t.output !== undefined) return p === normOut(t.output);
+  if(t.contains !== undefined) return [].concat(t.contains).every(c => p.includes(normOut(c)));
+  if(t.lines !== undefined) return p.split('\n').length === t.lines;
+  return false; }
+const testCode = tests => '\n\n' + tests.map(t => `try:\n    __ok = bool(${t.expr})\nexcept Exception:\n    __ok = False\nprint("${TEST}${String(t.label).replace(/"/g,'\\"')}\u00a7" + str(__ok))`).join('\n');
+function showOut(r){
+  const shown = r.out.split('\n').filter(l => !l.startsWith(TEST)).join('\n').replace(/\n$/,'');
+  let h = esc(shown);
+  if(!r.ok){ h += (h?'\n':'') + `<span class="e">${esc(r.err)}</span>`; const f = friendly(r.err); if(f) h += `<span class="h">Hint: ${esc(f)}</span>`; }
+  $('#cOut').innerHTML = h || '<span style="opacity:.6">(no output)</span>';
+}
+const inputList = () => $('#cInBox').hidden ? [] : $('#cIn').value.split(',').map(x => x.trim()).filter(x => x !== '');
+const passedAll = x => !!(x && typeof x === 'object' && x.of > 0 && x.pass === x.of);
+const draftKey = () => `code:${code}:${codeQ}`;
+const saveDraft = () => { try{ sessionStorage.setItem(draftKey(), $('#cCode').value); }catch(e){} };
+const syncGut = () => { const ta = $('#cCode'); $('#cGut').textContent = Array.from({length: ta.value.split('\n').length}, (_,i) => i+1).join('\n'); $('#cGut').scrollTop = ta.scrollTop; };
+function setupCode(id, q){
+  const sig = id + '\u0000' + (q.starter||'');
+  if(codeQ === sig) return;
+  codeQ = sig; codeTests = Array.isArray(q.tests) ? q.tests : Object.values(q.tests || {});
+  let d = null; try{ d = sessionStorage.getItem(draftKey()); }catch(e){}
+  $('#cCode').value = d !== null ? d : (q.starter || ''); syncGut();
+  $('#cInBox').hidden = !q.hasInputs; $('#cIn').value = q.inputs || '';
+  $('#cHint').hidden = !q.hint; $('#cHint').textContent = q.hint ? 'Hint: ' + q.hint : '';
+  $('#cCheck').hidden = !codeTests.length;
+  $('#cOut').textContent = ''; $('#cTests').innerHTML = '';
+  loadSk().catch(() => {});
+}
+async function runTests(){
+  const src = $('#cCode').value, exprT = codeTests.filter(t => t.expr);
+  const r = await runPython(src + (exprT.length ? testCode(exprT) : ''), inputList());
+  showOut(r);
+  const exprRes = {}; r.out.split('\n').filter(l => l.startsWith(TEST)).forEach(l => { const p = l.slice(TEST.length).split('\u00a7'); exprRes[p[0]] = p[1] === 'True'; });
+  const printed = outText(r.out), res = [];
+  for(const t of codeTests){
+    if(t.expr){ res.push({name:t.label, pass: !!exprRes[t.label]}); continue; }
+    const ins = t.inputs ? (Array.isArray(t.inputs) ? t.inputs : Object.values(t.inputs)) : null;
+    if(ins){ const rr = await runPython(src, ins); res.push({name: t.label + (ins.length ? `  (inputs: ${ins.join(', ')})` : ''), pass: rr.ok && outCheck(outText(rr.out), t)}); }
+    else res.push({name:t.label, pass: r.ok && outCheck(printed, t)});
+  }
+  $('#cTests').innerHTML = res.map(x => `<li class="${x.pass?'pass':'fail'}">${x.pass?'✓':'✗'} ${esc(x.name)}</li>`).join('')
+    + (res.length && res.every(x => x.pass) ? '<li class="pass">All tests passed. Now send it to your teacher.</li>' : '');
+  return res;
+}
+$('#cCode').addEventListener('input', () => { syncGut(); saveDraft(); });
+$('#cCode').addEventListener('scroll', syncGut);
+$('#cCode').addEventListener('keydown', e => { const ta = e.target;
+  if(e.key === 'Tab'){ e.preventDefault(); ta.setRangeText('    ', ta.selectionStart, ta.selectionEnd, 'end'); syncGut(); saveDraft(); }
+  if(e.key === 'Enter'){ const s0 = ta.selectionStart, line = ta.value.slice(0, s0).split('\n').pop(); let ind = (line.match(/^ */)||[''])[0]; if(/:\s*$/.test(line)) ind += '    '; e.preventDefault(); ta.setRangeText('\n'+ind, s0, ta.selectionEnd, 'end'); syncGut(); saveDraft(); } });
+$('#cRun').onclick = async () => { $('#cOut').textContent = 'Running…'; $('#cTests').innerHTML = ''; showOut(await runPython($('#cCode').value, inputList())); };
+$('#cCheck').onclick = async () => { $('#cOut').textContent = 'Checking…'; await runTests(); };
+$('#cReset').onclick = () => { if(!room || !room.question) return; if(!confirm('Start again with the original code?')) return; $('#cCode').value = room.question.starter || ''; syncGut(); saveDraft(); $('#cOut').textContent = ''; $('#cTests').innerHTML = ''; };
+$('#cSend').onclick = async () => {
+  if(!room || !room.active || !room.open) return;
+  const src = $('#cCode').value;
+  if(!src.trim()){ $('#qStatus').textContent = 'Write some code first.'; return; }
+  if(src.length > 4000){ $('#qStatus').textContent = 'Your program is too long to send (4000 characters max).'; return; }
+  sending = true; $('#cSend').disabled = true; $('#cSend').textContent = 'Checking…'; $('#cOut').textContent = 'Checking…';
+  const res = codeTests.length ? await runTests() : [];
+  sending = false;
+  send(room.active, {code: src, pass: res.filter(x => x.pass).length, of: res.length, r: res.map(x => x.pass ? '1' : '0').join('')});
+};
 
 async function send(q, value){
   pending[q] = value; typedDraft = null; render();

@@ -6,7 +6,7 @@
 <title>Python While Loops</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap">
-<link rel="stylesheet" href="../shared/lesson.css?v=5">
+<link rel="stylesheet" href="../shared/lesson.css?v=6">
 <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -14,7 +14,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="../firebase-config.js"></script>
-<script src="../shared/lesson.js?v=5"></script>
+<script src="../shared/lesson.js?v=6"></script>
 </head>
 <body>
 <script>
@@ -119,6 +119,12 @@ L.start({
     'q-checks': {title:'How many times is the condition count <= 3 checked?', opts:['3','4','5','1'], correct:1},
     'q-inf': {title:'Which of these loops never stops?', opts:['n = 5\nwhile n > 0:\n    n = n - 1','n = 5\nwhile n > 0:\n    print(n)','n = 0\nwhile n < 3:\n    n = n + 1','n = 10\nwhile n > 20:\n    print(n)'], correct:1},
     't-fix': {type:'text', title:'Type the missing line that stops the infinite loop.', accept:['count = count + 1','count += 1'], mono:true, placeholder:'count = …'},
+    'k-battery': {type:'code', title:'Robot battery: make the loop stop', hint:'Inside the loop, make battery go down by 25.',
+      starter:'battery = 100\nwhile battery > 0:\n    print("Battery:", battery)\n    # make the battery go down by 25\n\nprint("Recharge me!")',
+      model:'battery = 100\nwhile battery > 0:\n    print("Battery:", battery)\n    battery = battery - 25\n\nprint("Recharge me!")',
+      tests:[{label:'Prints Battery: 100, 75, 50, 25', output:'Battery: 100\nBattery: 75\nBattery: 50\nBattery: 25\nRecharge me!'},
+             {label:"Prints Recharge me!", contains:"Recharge me!"},
+             {label:'The loop stops (no infinite loop)', lines:5}]},
     'q-pass': {title:'The Inputs are: cat, dog, robot123. How many times is "Wrong, try again" printed?', opts:['0','1','2','3'], correct:2, code:PASSWORD},
     'c-parsons': {type:'checkin', title:'Parsons problem: how did you get on?'},
     't-weeks': {type:'text', title:'How many weeks does it take to save the money?', accept:['7'], placeholder:'a number'},
@@ -215,6 +221,25 @@ L.start({
         <li>Run it and let the class watch the 1s pile up. Ask: "Why does <code>count</code> never change?"</li>
         <li>Typed answer accepts <code>count = count + 1</code> or <code>count += 1</code>, with any spacing.</li>
         <li>In the vote, option D never runs at all (10 &gt; 20 is False straight away) — a nice contrast with the infinite loop in B.</li></ul></div>`},
+
+    {key:'live', label:'Code it live', html:`
+      <div class="stage-head"><div><div class="eyebrow">Code on your laptop</div><h2 id="h-live">Robot battery: fix the infinite loop</h2></div>
+      <p class="lead">The robot uses 25% of its battery each step. Right now the loop never stops!</p></div>
+      <ol>
+        <li>Open the class answer page on your laptop.</li>
+        <li>Add <b>one line</b> inside the loop so the battery goes down by 25.</li>
+        <li>Press <b>Run</b>, then <b>Check my code</b>, then <b>Send to teacher</b>.</li>
+      </ol>
+      <p data-show="support"><span class="tier support">Support</span>The line starts with <code>battery =</code> and needs 4 spaces in front.</p>
+      <p data-show="core"><span class="tier core">Core</span>Finished? Change it so the robot uses 10% each step. How many lines are printed now?</p>
+      <p data-show="stretch"><span class="tier stretch">Stretch</span>Finished? Print <code>Low battery!</code> inside the loop when the battery is 25 or less.</p>
+      <div data-vote="k-battery"></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Press <b>Open on laptops</b>. Students get the starting code in an editor on their own laptop, run it, check it and send it to you.</li>
+        <li>The checks look for exactly 4 battery lines and then <code>Recharge me!</code>. Students who change it to 10% (Core extension) will fail the first check if they send again. That's a good talking point about tests.</li>
+        <li>Press <b>Peek</b> to see programs coming in on your screen only. On the board, <b>Show results</b> shows how many passed each check and every program, with no names. Use <b>Show big</b> to discuss one program with the class. Try picking a program that <i>nearly</i> works.</li>
+        <li>Common mistakes: forgetting the 4 spaces (the line ends up after the loop, which is still infinite), or writing <code>battery - 25</code> without <code>battery =</code>.</li>
+        <li>Praise prompt: "I can see lots of you found the missing line. That line is the one that stops the loop."</li></ul></div>`},
 
     {key:'input', label:'Loops with input', html:`
       <div class="stage-head"><div><div class="eyebrow">Real use</div><h2 id="h-input">Keep asking until the answer is right</h2></div>

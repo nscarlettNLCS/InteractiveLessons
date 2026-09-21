@@ -153,6 +153,7 @@ const CHECKIN = ['All correct','Partly done','Stuck'];
 const WIDGETS = {};
 const norm = (t, mono) => { let s = String(t).trim().toLowerCase().replace(/\s+/g,' '); return mono ? s.replace(/\s+/g,'') : s; };
 function askWidget(sel, id, q){
+  if(q.type === 'code') return codeTask(sel, id, q);
   const h = host(sel);
   const type = q.type || 'choice';
   const opts = type === 'checkin' ? CHECKIN : (q.opts || []);
@@ -246,6 +247,84 @@ function askWidget(sel, id, q){
     totals,
     texts(){ return texts; },
     isRight
+  };
+  WIDGETS[id].setState('', false);
+  draw();
+}
+
+/* ---------------- live code task: students write code on their own laptops ---------------- */
+const cleanTests = tests => (tests||[]).map(t => { const o = {label: String(t.label||'Test')};
+  ['expr','output','contains','lines','inputs'].forEach(k => { if(t[k] !== undefined && t[k] !== null) o[k] = t[k]; }); return o; });
+function codeTask(sel, id, q){
+  const h = host(sel);
+  const tests = cleanTests(q.tests), marked = tests.length > 0;
+  h.innerHTML = `
+    ${q.starter !== undefined ? `<details class="ctry"><summary>Model it on the board</summary><div class="cted"></div></details>` : ''}
+    <div class="hidden-until" id="veil-${id}"><b class="rcount">0</b><span>programs sent · hidden until you show them</span></div>
+    <div class="csum" hidden></div>
+    <div class="cfilter" hidden role="group" aria-label="Filter programs"><button data-f="all" aria-pressed="true">All</button><button data-f="pass" aria-pressed="false">✓ All tests passed</button><button data-f="fail" aria-pressed="false">Not yet</button></div>
+    <div class="cgrid" hidden></div>
+    <div class="accepted cmodel" hidden></div>
+    <div class="bar"><button class="btn mark reveal">${q.model ? 'Show results + model answer' : 'Show results'}</button><button class="btn peek">Peek</button><button class="btn resetv">Clear programs</button><span class="pct"></span></div>
+    <div class="livebar"><button class="btn primary lopen">Open on laptops</button><button class="btn lclose">Close</button><span class="pill closed lstate">Not open</span><span class="small muted"><span class="count lcount">0</span> programs sent</span></div>`;
+  if(q.starter !== undefined) editor($('.cted', h), q.starter, {inputs: q.inputs, tests: marked ? () => tests : null});
+  let subs = {}, revealed = false, peek = false, filter = 'all', order = [];
+  const passed = x => x && x.of > 0 && x.pass === x.of;
+  function draw(){
+    const show = revealed || peek, ids = Object.keys(subs), all = ids.length;
+    ids.forEach(u => { if(!order.includes(u)) order.push(u); });
+    order = order.filter(u => subs[u]);
+    $('.rcount', h).textContent = all; $('.lcount', h).textContent = all;
+    $('#veil-'+id, h).hidden = show;
+    const sum = $('.csum', h), grid = $('.cgrid', h), fl = $('.cfilter', h);
+    sum.hidden = grid.hidden = fl.hidden = !show;
+    if(show){
+      const full = ids.filter(u => passed(subs[u])).length;
+      sum.innerHTML = (marked ? tests.map((t,i) => { const n = ids.filter(u => (subs[u].r||'')[i] === '1').length, pc = all ? n/all*100 : 0;
+        return `<div class="ctest"><span class="t">${esc(t.label)}</span><div class="res-bar"><i class="c" style="width:${pc}%"></i><i class="w" style="width:${all?100-pc:0}%"></i></div><span class="m">${n} of ${all}</span></div>`; }).join('') : '')
+        + `<p class="cfull"><b>${full}</b> of ${all} passed every test</p>`;
+      const list = order.map((u,i) => ({u, n:i+1, x:subs[u]})).filter(o => filter === 'all' || (filter === 'pass') === passed(o.x));
+      grid.innerHTML = list.map(o => `<div class="ccard ${marked ? (passed(o.x)?'ok':'no') : ''}" data-u="${esc(o.u)}">
+          <div class="chead"><b>Program ${o.n}</b><span>${marked ? (passed(o.x) ? '✓ ' : '✗ ') + `${o.x.pass}/${o.x.of} tests` : ''}</span><span><button class="zoom" title="Show this program large">Show big</button><button class="x" title="Hide this program" aria-label="Hide this program">✕</button></span></div>
+          ${codeBlock(String(o.x.code||'').slice(0,4000))}</div>`).join('') || '<p class="small muted">No programs here yet.</p>';
+      $$('.ccard .x', grid).forEach(b => b.onclick = () => { const u = b.closest('.ccard').dataset.u; delete subs[u]; Live.deleteAnswer(id, u); draw(); });
+      $$('.ccard .zoom', grid).forEach(b => b.onclick = () => { const c = b.closest('.ccard'); zoom(c.querySelector('.chead b').textContent + ' ' + c.querySelector('.chead span').textContent, subs[c.dataset.u].code); });
+    }
+    const m = $('.cmodel', h); m.hidden = !(revealed && q.model);
+    if(q.model) m.innerHTML = `<div>Model answer</div>${codeBlock(q.model)}`;
+    $('.pct', h).textContent = (show && marked && all) ? `${Math.round(ids.filter(u => passed(subs[u])).length/all*100)}% passed every test` : '';
+    if(window.Results) Results.refresh();
+  }
+  function zoom(title, src){
+    const z = el(`<div class="czoom" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="czin"><div class="chead"><b>${esc(title)}</b><button class="btn zclose">Close (Esc)</button></div>${codeBlock(String(src||''))}<div class="bar"><button class="btn primary zrun">▶ Run it</button></div><pre class="out zout" hidden></pre></div></div>`);
+    document.body.appendChild(z);
+    const close = () => { z.remove(); document.removeEventListener('keydown', k, true); };
+    const k = e => { if(e.key === 'Escape'){ e.stopPropagation(); close(); } };
+    document.addEventListener('keydown', k, true);
+    $('.zclose', z).onclick = close; z.onclick = e => { if(e.target === z) close(); };
+    $('.zrun', z).onclick = async () => { const o = $('.zout', z); o.hidden = false; o.textContent = 'Running…';
+      const ins = q.inputs !== undefined ? String(q.inputs).split(',').map(x => x.trim()).filter(Boolean) : null;
+      showResult(o, await runPython(String(src||''), ins)); };
+    $('.zclose', z).focus();
+  }
+  $$('.cfilter button', h).forEach(b => b.onclick = () => { filter = b.dataset.f; $$('.cfilter button', h).forEach(x => x.setAttribute('aria-pressed', x === b)); draw(); });
+  const peekBtn = $('.peek', h);
+  peekBtn.onclick = () => { peek = !peek; peekBtn.setAttribute('aria-pressed', peek); peekBtn.textContent = peek ? 'Hide' : 'Peek'; draw(); };
+  $('.reveal', h).onclick = () => { revealed = true; draw(); Live.reveal(id, {code:true, model: q.model || '', marked}); };
+  $('.resetv', h).onclick = () => { subs = {}; order = []; revealed = false; peek = false; peekBtn.textContent = 'Peek'; peekBtn.setAttribute('aria-pressed', false); draw(); Live.clear(id); };
+  $('.lopen', h).onclick = () => Live.open(id, {id, title:q.title, type:'code', code:q.code||'', starter:q.starter||'', tests, inputs: q.inputs !== undefined ? String(q.inputs) : '', hasInputs: q.inputs !== undefined, hint:q.hint||''});
+  $('.lclose', h).onclick = () => Live.close();
+  WIDGETS[id] = {
+    setLive(arr, txt){ subs = {}; Object.entries(txt||{}).forEach(([u,x]) => { if(x && typeof x === 'object') subs[u] = x; }); draw(); },
+    setState(active, open){ const me = active === id, st = $('.lstate', h);
+      st.className = 'pill lstate ' + (me&&open ? 'open' : 'closed');
+      st.textContent = me&&open ? 'Open: students are coding' : me ? 'Closed' : 'Not open';
+      $('.lopen', h).disabled = me&&open; $('.lclose', h).disabled = !(me&&open); },
+    redraw: draw,
+    meta: {id, title:q.title, type:'code', marked, host:h},
+    totals(){ return [0]; },
+    subs(){ return subs; },
+    passed
   };
   WIDGETS[id].setState('', false);
   draw();
@@ -616,7 +695,7 @@ const Live = (() => {
       const vref = st.db.ref(`rooms/${code}/votes`);
       const vcb = vref.on('value', snap => { const v = snap.val() || {};
         Object.keys(WIDGETS).forEach(q => { const raw = v[q] || {}; const arr = [0,0,0,0,0,0]; const txt = {};
-          Object.entries(raw).forEach(([u,x]) => { if(typeof x === 'number'){ if(arr[x] !== undefined) arr[x]++; } else if(typeof x === 'string') txt[u] = x; });
+          Object.entries(raw).forEach(([u,x]) => { if(typeof x === 'number'){ if(arr[x] !== undefined) arr[x]++; } else if(x !== null && (typeof x === 'string' || typeof x === 'object')) txt[u] = x; });
           WIDGETS[q].setLive(arr, txt); }); });
       const jref = st.db.ref(`rooms/${code}/joined`);
       const jcb = jref.on('value', snap => { st.joined = snap.exists() ? Object.keys(snap.val()).length : 0; const n = $('#joinedN'); if(n) n.textContent = st.joined; dockLabel(); });
@@ -657,6 +736,12 @@ const Results = (() => {
     let sumPct = 0, nq = 0; const lines = [];
     const rows = order().map(({w,st}) => {
       const m = w.meta, stage = STAGES[st] ? STAGES[st].label : '';
+      if(m.type === 'code'){
+        const sb = w.subs(), all = Object.keys(sb).length, right = Object.values(sb).filter(w.passed).length, pct = all ? Math.round(right/all*100) : 0;
+        if(m.marked && all){ sumPct += pct; nq++; }
+        lines.push(`${stage} – ${m.title}: ${all ? (m.marked ? pct+'% passed every test ('+right+'/'+all+')' : all+' programs') : 'no programs'}`);
+        return `<div class="res-row${all?'':' empty'}"><span class="t">${esc(stage)} · ${esc(m.title)}</span>${m.marked?`<div class="res-bar"><i class="c" style="width:${pct}%"></i><i class="w" style="width:${all?100-pct:0}%"></i></div>`:''}<span class="m">${all ? (m.marked ? `${pct}% passed every test · ${right} of ${all} programs` : `${all} programs`) : 'No programs yet'}</span></div>`;
+      }
       if(m.type === 'text'){
         const txt = w.texts(), all = Object.keys(txt).length;
         if(!m.marked){ lines.push(`${stage} – ${m.title}: ${all} answers`);
@@ -799,7 +884,7 @@ function shell(cfg){
     const id = hostEl.dataset.vote, q = (cfg.questions||{})[id]; if(!q) return;
     const isCheck = q.type === 'checkin';
     hostEl.className = 'panel hinge';
-    hostEl.innerHTML = `<div class="eyebrow">${isCheck ? 'Class check-in' : q.type === 'text' ? 'Type your answer' : 'Class vote'}</div>
+    hostEl.innerHTML = `<div class="eyebrow">${isCheck ? 'Class check-in' : q.type === 'text' ? 'Type your answer' : q.type === 'code' ? 'Code on your laptop' : 'Class vote'}</div>
       <p class="big-q" style="font-size:${isCheck?'1.25rem':'1.45rem'}">${esc(q.title)}</p>
       ${q.code ? codeBlock(q.code) : ''}<div class="vw"></div>`;
     askWidget($('.vw', hostEl), id, q);
@@ -871,7 +956,7 @@ function start(cfg){
   go(0);
 }
 
-return { start, editor, trace, parsons, gaps, annotate, sorter, askWidget, bugHunt, loopTrace, rangeExplorer,
+return { start, editor, codeTask, trace, parsons, gaps, annotate, sorter, askWidget, bugHunt, loopTrace, rangeExplorer,
   code: codeBlock, scopeCode, hl, run: runPython, showResult, onLevel, setLevel,
   $, $$, esc, CHECKIN, WIDGETS, Live, Results, get root(){ return ROOT; } };
 })();

@@ -399,3 +399,35 @@ html, body, code, pre, kbd, samp, textarea, input, button, .code, .gapcode, .out
 .sortrow .seg button[aria-pressed="true"]::before{content:"✓ "}
 .sortrow .seg button[aria-pressed="true"][data-s="g"]{background:var(--glob);color:var(--surface)}
 .sortrow .seg button[aria-pressed="true"][data-s="l"]{background:var(--loc);color:var(--surface)}
+
+/* ---- live code task ---- */
+.ctry{border:1px solid var(--line);border-radius:12px;padding:8px 12px;background:var(--surface-2)}
+.ctry summary{cursor:pointer;font-weight:700}
+.ctry[open] summary{margin-bottom:10px}
+.csum{display:grid;gap:6px}
+.ctest{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,2fr) auto;gap:10px;align-items:center}
+.ctest .t{font-weight:700}
+.ctest .m{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:700}
+.cfull{margin:4px 0 0}
+.cfull b{font-family:var(--display);font-size:1.6rem;color:var(--good)}
+.cfilter{display:flex;flex-wrap:wrap;gap:6px}
+.cfilter button{border:2px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-weight:700;cursor:pointer}
+.cfilter button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:10px;align-items:start}
+.ccard{border:2px solid var(--line);border-radius:12px;background:var(--surface);padding:8px;display:grid;gap:6px;min-width:0}
+.ccard.ok{border-color:var(--good);border-style:solid}
+.ccard.no{border-color:var(--bad);border-style:dashed}
+.ccard.ok .chead span:first-of-type{color:var(--good)}
+.ccard.no .chead span:first-of-type{color:var(--bad)}
+.ccard .code{font-size:.85rem;max-height:18em;overflow:auto}
+.chead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.chead span{font-weight:700}
+.chead button{border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:3px 8px;font-weight:700;cursor:pointer;margin-left:4px}
+.chead .x{border:0;background:transparent;color:var(--muted)}
+.cmodel{display:grid;gap:6px}
+.cmodel .code{font-weight:400}
+.czoom{position:fixed;inset:0;z-index:200;background:rgba(5,12,16,.72);display:grid;place-items:center;padding:16px}
+.czin{background:var(--surface);color:var(--ink);border-radius:16px;padding:18px;width:min(1100px,100%);max-height:100%;overflow:auto;display:grid;gap:12px}
+.czin .chead b{font-family:var(--display);font-size:1.4rem}
+.czin .code{font-size:1.5rem}
+.czin .out{font-size:1.2rem}

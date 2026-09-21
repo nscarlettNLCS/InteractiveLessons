@@ -14,7 +14,22 @@
           "$q": {
             "$uid": {
               ".write": "auth != null && auth.uid === $uid && root.child('rooms').child($code).child('open').val() === true && root.child('rooms').child($code).child('active').val() === $q",
-              ".validate": "(newData.isNumber() && newData.val() >= 0 && newData.val() < 6) || (newData.isString() && newData.val().length > 0 && newData.val().length <= 120)"
+              ".validate": "(newData.isNumber() && newData.val() >= 0 && newData.val() < 6) || (newData.isString() && newData.val().length > 0 && newData.val().length <= 120) || (newData.hasChildren(['code', 'pass', 'of']) && newData.child('code').isString() && newData.child('code').val().length <= 4000)",
+              "code": {
+                ".validate": "newData.isString() && newData.val().length <= 4000"
+              },
+              "pass": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 50"
+              },
+              "of": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 50"
+              },
+              "r": {
+                ".validate": "newData.isString() && newData.val().length <= 50"
+              },
+              "$other": {
+                ".validate": false
+              }
             }
           }
         }
