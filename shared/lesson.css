@@ -390,3 +390,12 @@ a.tbtn{color:inherit;text-decoration:none;display:inline-flex;align-items:center
 .sortrow.plain{grid-template-columns:minmax(0,1.4fr) auto minmax(0,1fr)}
 .sortrow .sname{font-weight:700}
 @media (max-width:560px){.sortrow.plain{grid-template-columns:1fr auto}}
+
+/* show code exactly as typed: no <= → ≤ or != → ≠ ligatures */
+html, body, code, pre, kbd, samp, textarea, input, button, .code, .gapcode, .out, .editor, .ttable, .pline, .acode{font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0,"dlig" 0}
+/* sorter: any chosen answer is clearly highlighted */
+.sortrow .seg button{min-width:5.6em;text-align:center}
+.sortrow .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.sortrow .seg button[aria-pressed="true"]::before{content:"✓ "}
+.sortrow .seg button[aria-pressed="true"][data-s="g"]{background:var(--glob);color:var(--surface)}
+.sortrow .seg button[aria-pressed="true"][data-s="l"]{background:var(--loc);color:var(--surface)}

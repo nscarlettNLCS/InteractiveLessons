@@ -23,7 +23,7 @@
   :root{ --ground:#0D171C; --surface:#15232A; --surface-2:#1A2B33; --ink:#E4EEEC; --muted:#9CB0B3; --line:#2B3E46;
     --accent:#5FC3CB; --accent-ink:#0D171C; --mark-soft:#3A3217; --good:#6FD39A; --good-soft:#173627; --bad:#F2877F; --bad-soft:#3E1D1B; --code-bg:#0A141A; }
 }
-*{box-sizing:border-box}
+*{box-sizing:border-box;font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
 [hidden]{display:none!important}
 html,body{margin:0}
 body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.45;padding-inline:16px;padding-block:max(16px,env(safe-area-inset-top,0px)) max(24px,env(safe-area-inset-bottom,0px));min-height:100vh}
