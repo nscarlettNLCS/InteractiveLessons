@@ -83,6 +83,15 @@ function showResult(pre, r){
   pre.innerHTML = html;
   return lines.filter(l => l.startsWith(TEST)).map(l => { const p = l.slice(TEST.length).split('\u00a7'); return {name:p[0], pass:p[1] === 'True'}; });
 }
+const outText = raw => raw.split('\n').filter(l => !l.startsWith(TEST)).join('\n').replace(/[ \t]+$/gm,'').trim();
+const normOut = s => String(s).replace(/\r/g,'').split('\n').map(l => l.trim().replace(/\s+/g,' ')).join('\n').trim().toLowerCase();
+function outCheck(printed, t){
+  const p = normOut(printed);
+  if(t.output !== undefined) return p === normOut(t.output);
+  if(t.contains !== undefined) return [].concat(t.contains).every(c => p.includes(normOut(c)));
+  if(t.lines !== undefined) return p.split('\n').length === t.lines;
+  return false;
+}
 const testCode = tests => '\n\n' + tests.map(t =>
   `try:\n    __ok = bool(${t.expr})\nexcept Exception:\n    __ok = False\nprint("${TEST}${t.label.replace(/"/g,'\\"')}\u00a7" + str(__ok))`).join('\n');
 
@@ -107,10 +116,13 @@ function editor(sel, start, opts){
   const go = async withTests => {
     st.textContent = 'Running…';
     const t = withTests && opts.tests ? opts.tests() : null;
-    const r = await runPython(ta.value + (t ? testCode(t) : ''));
-    const res = showResult(pre, r); st.textContent = '';
+    const exprT = t ? t.filter(x => x.expr) : [];
+    const r = await runPython(ta.value + (exprT.length ? testCode(exprT) : ''));
+    let res = showResult(pre, r); st.textContent = '';
     if(t){ const ul = $('.tests', h);
-      if(!r.ok && !res.length){ ul.innerHTML = '<li class="fail">Fix the error first, then check again.</li>'; return; }
+      if(!r.ok){ ul.innerHTML = '<li class="fail">Fix the error first, then check again.</li>'; return; }
+      const printed = outText(r.out);
+      res = res.concat(t.filter(x => !x.expr).map(x => ({name:x.label, pass: outCheck(printed, x)})));
       ul.innerHTML = res.map(x => `<li class="${x.pass?'pass':'fail'}">${x.pass?'✓':'✗'} ${esc(x.name)}</li>`).join('');
       if(res.length && res.every(x => x.pass)) ul.insertAdjacentHTML('beforeend', '<li class="pass">All tests passed.</li>');
     }
@@ -431,6 +443,131 @@ function sorter(sel, cfg){
   onLevel(setup); setup();
 }
 
+/* ---------------- bug hunt ---------------- */
+/* cfg: {code, bugs:[{line, what}], tests:[{label, output|contains}], fixed} */
+function bugHunt(sel, cfg){
+  const h = host(sel);
+  const lines = cfg.code.split('\n');
+  h.innerHTML = `
+    <p class="small"><b>1.</b> Tap every line you think has a mistake. <b>2.</b> Press <b>Check</b>. <b>3.</b> Fix the code below and run it.</p>
+    <div class="code bugcode">${lines.map((l,i)=>`<button class="ln bugln" data-l="${i+1}" aria-pressed="false"><i>${i+1}</i><span>${hl(l)||' '}</span><em class="flag" aria-hidden="true"></em></button>`).join('')}</div>
+    <div class="bar"><button class="btn mark bcheck">✓ Check</button><button class="btn breveal">Show the bugs</button><button class="btn breset">Clear</button><span class="status bcount"></span></div>
+    <div class="bfb" aria-live="polite"></div>
+    <div class="bfix"></div>`;
+  const bugLines = cfg.bugs.map(b => b.line);
+  $$('.bugln', h).forEach(b => b.onclick = () => { const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on); b.classList.remove('found','missed','wrongflag'); $('.bfb', h).innerHTML=''; count(); });
+  const count = () => { const n = $$('.bugln[aria-pressed="true"]', h).length; $('.bcount', h).textContent = `${n} line${n===1?'':'s'} flagged · ${cfg.bugs.length} bug${cfg.bugs.length===1?'':'s'} to find`; };
+  function mark(reveal){
+    let found = 0, wrong = 0;
+    $$('.bugln', h).forEach(b => { const n = +b.dataset.l, on = b.getAttribute('aria-pressed') === 'true', isBug = bugLines.includes(n);
+      b.classList.remove('found','missed','wrongflag');
+      if(isBug && (on || reveal)){ b.classList.add('found'); if(on) found++; }
+      else if(isBug) b.classList.add('missed');
+      else if(on){ b.classList.add('wrongflag'); wrong++; } });
+    const list = cfg.bugs.filter(b => reveal || $(`.bugln[data-l="${b.line}"]`, h).getAttribute('aria-pressed') === 'true')
+      .map(b => `<li><b>Line ${b.line}:</b> ${b.what}</li>`).join('');
+    $('.bfb', h).innerHTML = (reveal ? '' : `<div class="feedback ${found===cfg.bugs.length&&!wrong?'good':found?'mid':'bad'}">You found ${found} of ${cfg.bugs.length} bugs${wrong?` · ${wrong} line${wrong>1?'s were':' was'} fine (grey)`:''}${found<cfg.bugs.length?'. Keep looking!':'!'}</div>`)
+      + (list ? `<ul class="buglist">${list}</ul>` : '');
+  }
+  $('.bcheck', h).onclick = () => mark(false);
+  $('.breveal', h).onclick = () => mark(true);
+  $('.breset', h).onclick = () => { $$('.bugln', h).forEach(b => { b.setAttribute('aria-pressed', false); b.classList.remove('found','missed','wrongflag'); }); $('.bfb', h).innerHTML=''; count(); };
+  count();
+  editor($('.bfix', h), cfg.code, {id: cfg.id, tests: cfg.tests ? () => cfg.tests : null});
+}
+
+/* ---------------- loop trace table ---------------- */
+/* cfg: {code, cols:['i','total'], steps:[{l, say, set:{col:val}, row:true, out:'text'}]}
+   row:true starts a new row in the table; set fills cells in the current row; out adds to the output column. */
+function loopTrace(sel, cfg){
+  const h = host(sel);
+  const cols = cfg.cols.concat(['output']);
+  h.innerHTML = `
+    <div class="cols">
+      <div class="panel">
+        ${codeBlock(cfg.code)}
+        <div class="bar"><button class="btn primary lrun">▶ Run program</button></div>
+        <div class="out-label">Output</div><pre class="out lout"></pre>
+      </div>
+      <div class="panel">
+        <h3>Trace table</h3>
+        <div class="bar"><button class="btn lback">← Back</button><button class="btn mark lstep">Next step →</button><button class="btn lreset">Restart</button><button class="btn lall">Fill it in</button><span class="status lpos"></span></div>
+        <div class="ttwrap"><table class="ttable"><thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody></tbody></table></div>
+        <div class="out-label">What is happening</div>
+        <div class="say lsay" aria-live="polite">Press <b>Next step</b>. Each loop adds a new row to the table.</div>
+      </div>
+    </div>`;
+  const code = $('.code', h), steps = cfg.steps;
+  let i = -1;
+  function build(upto){
+    const rows = []; let cur = null, lastCell = null;
+    for(let k = 0; k <= upto; k++){ const s = steps[k];
+      if(s.row || !cur){ cur = {}; rows.push(cur); }
+      lastCell = null;
+      Object.entries(s.set || {}).forEach(([c,v]) => { cur[c] = v; lastCell = [rows.length-1, c]; });
+      if(s.out !== undefined){ cur.output = (cur.output ? cur.output + ' / ' : '') + s.out; lastCell = [rows.length-1, 'output']; }
+    }
+    return {rows, lastCell};
+  }
+  function draw(){
+    $$('.ln', code).forEach(x => x.classList.remove('hl'));
+    const tb = $('tbody', h);
+    if(i < 0){ tb.innerHTML = `<tr>${cols.map(()=>'<td>&nbsp;</td>').join('')}</tr>`; $('.lsay', h).innerHTML = 'Press <b>Next step</b>. Each loop adds a new row to the table.'; $('.lpos', h).textContent=''; $('.lback', h).disabled = true; $('.lstep', h).disabled = false; return; }
+    const s = steps[i], {rows, lastCell} = build(i);
+    const ln = $(`.ln[data-l="${s.l}"]`, code); if(ln) ln.classList.add('hl');
+    tb.innerHTML = rows.map((r,ri) => `<tr${ri===rows.length-1?' class="currow"':''}>${cols.map(c => `<td${lastCell && lastCell[0]===ri && lastCell[1]===c ? ' class="new"' : ''}>${r[c]!==undefined ? esc(String(r[c])) : ''}</td>`).join('')}</tr>`).join('');
+    $('.lsay', h).innerHTML = `<b>Line ${s.l}:</b> ${s.say}`;
+    $('.lpos', h).textContent = `Step ${i+1} of ${steps.length}`;
+    $('.lback', h).disabled = i <= 0; $('.lstep', h).disabled = i >= steps.length-1;
+  }
+  $('.lstep', h).onclick = () => { if(i < steps.length-1){ i++; draw(); } };
+  $('.lback', h).onclick = () => { if(i > 0){ i--; draw(); } };
+  $('.lreset', h).onclick = () => { i = -1; draw(); };
+  $('.lall', h).onclick = () => { i = steps.length-1; draw(); };
+  $('.lrun', h).onclick = async () => { const o = $('.lout', h); o.textContent = 'Running…'; showResult(o, await runPython(cfg.code)); };
+  draw();
+}
+
+/* ---------------- range() explorer ---------------- */
+function rangeExplorer(sel, cfg){
+  const h = host(sel); cfg = cfg || {};
+  h.innerHTML = `
+    <div class="rx">
+      <div class="rxcode" aria-live="polite"></div>
+      <div class="rxin">
+        <label>start <input type="number" class="rstart" value="${cfg.start ?? 0}"></label>
+        <label>stop <input type="number" class="rstop" value="${cfg.stop ?? 5}"></label>
+        <label>step <input type="number" class="rstep" value="${cfg.step ?? 1}"></label>
+        <span class="seg rxmode" role="group" aria-label="How many numbers to write in range()">
+          <button data-m="1">range(stop)</button><button data-m="2">range(start, stop)</button><button data-m="3">range(start, stop, step)</button></span>
+      </div>
+      <div class="rxboxes" aria-live="polite"></div>
+      <p class="rxnote small"></p>
+    </div>`;
+  let mode = cfg.mode || 1;
+  function draw(){
+    const sEl = $('.rstart', h), eEl = $('.rstop', h), pEl = $('.rstep', h);
+    sEl.closest('label').hidden = mode < 2; pEl.closest('label').hidden = mode < 3;
+    $$('.rxmode button', h).forEach(b => b.setAttribute('aria-pressed', +b.dataset.m === mode));
+    const start = mode >= 2 ? parseInt(sEl.value || '0', 10) : 0;
+    const stop = parseInt(eEl.value || '0', 10);
+    let step = mode >= 3 ? parseInt(pEl.value || '1', 10) : 1;
+    const args = mode === 1 ? `${stop}` : mode === 2 ? `${start}, ${stop}` : `${start}, ${stop}, ${step}`;
+    $('.rxcode', h).innerHTML = codeBlock(`for i in range(${args}):\n    print(i)`);
+    if(step === 0){ $('.rxboxes', h).innerHTML = ''; $('.rxnote', h).innerHTML = '<b>step can\'t be 0</b> — Python would give an error.'; return; }
+    const vals = [];
+    for(let v = start; step > 0 ? v < stop : v > stop; v += step){ vals.push(v); if(vals.length > 60) break; }
+    $('.rxboxes', h).innerHTML = vals.length ? vals.slice(0,60).map((v,k)=>`<span class="rxbox" style="animation-delay:${Math.min(k,20)*40}ms"><small>loop ${k+1}</small><b>${v}</b></span>`).join('') + (vals.length > 60 ? '<span class="rxbox more">…</span>' : '') : '<span class="rxempty">No numbers — the loop never runs!</span>';
+    $('.rxnote', h).innerHTML = vals.length
+      ? `The loop runs <b>${vals.length > 60 ? '60+' : vals.length} time${vals.length===1?'':'s'}</b>. It starts at <b>${start}</b> and stops <b>before</b> ${stop}${step!==1?`, counting in steps of <b>${step}</b>`:''}.`
+      : (step > 0 ? `start (${start}) is not smaller than stop (${stop}), so there is nothing to count.` : `With a negative step, start must be bigger than stop.`);
+  }
+  $$('input', h).forEach(x => x.addEventListener('input', draw));
+  $$('.rxmode button', h).forEach(b => b.onclick = () => { mode = +b.dataset.m; draw(); });
+  draw();
+  return { set(o){ if(o.mode) mode = o.mode; if(o.start !== undefined) $('.rstart', h).value = o.start; if(o.stop !== undefined) $('.rstop', h).value = o.stop; if(o.step !== undefined) $('.rstep', h).value = o.step; draw(); } };
+}
+
 /* ---------------- live session (Firebase) ---------------- */
 const Live = (() => {
   const st = {on:false, code:'', db:null, uid:'', active:'', open:false, joined:0, refs:[]};
@@ -719,7 +856,7 @@ function start(cfg){
   go(0);
 }
 
-return { start, editor, trace, parsons, gaps, annotate, sorter, askWidget,
+return { start, editor, trace, parsons, gaps, annotate, sorter, askWidget, bugHunt, loopTrace, rangeExplorer,
   code: codeBlock, scopeCode, hl, run: runPython, showResult, onLevel, setLevel,
   $, $$, esc, CHECKIN, WIDGETS, Live, Results, get root(){ return ROOT; } };
 })();

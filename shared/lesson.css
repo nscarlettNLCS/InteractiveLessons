@@ -334,3 +334,49 @@ body.present .dock:hover, body.present .dock:focus-within, body.present .dock.wa
 .lcard.soon{opacity:.6;border-style:dashed;pointer-events:none}
 .tagrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 .tag{font-size:.72rem;font-weight:700;background:var(--surface-2);border-radius:999px;padding:2px 9px;color:var(--muted)}
+
+/* ---------- bug hunt ---------- */
+.bugcode .bugln{display:grid;grid-template-columns:3em 1fr auto;width:100%;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;padding:0 16px 0 0;border-left:5px solid transparent}
+.bugcode .bugln:hover{background:var(--code-line)}
+.bugcode .bugln[aria-pressed="true"]{background:rgba(244,197,66,.16);border-left-color:var(--mark)}
+.bugcode .bugln[aria-pressed="true"] .flag::after{content:"🚩";font-style:normal}
+.bugcode .bugln.found{background:rgba(111,211,154,.18);border-left-color:#6FD39A}
+.bugcode .bugln.found .flag::after{content:"✓ bug";color:#B9F1CD;font-family:var(--body);font-weight:700;font-size:.8rem;font-style:normal}
+.bugcode .bugln.missed{border-left-color:transparent}
+.bugcode .bugln.wrongflag{background:rgba(126,148,154,.18);border-left-color:var(--code-muted)}
+.bugcode .bugln.wrongflag .flag::after{content:"fine";color:var(--code-muted);font-family:var(--body);font-size:.8rem;font-style:normal}
+.buglist{margin:6px 0 0;padding-left:1.2em;display:grid;gap:4px}
+.bfix{display:grid;gap:10px;margin-top:6px}
+
+/* ---------- loop trace table ---------- */
+.ttwrap{overflow-x:auto}
+.ttable{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:1.05rem}
+.ttable th,.ttable td{border:1px solid var(--line);padding:6px 10px;text-align:center;min-width:3.5em}
+.ttable th{background:var(--accent-soft);color:var(--ink);font-size:.85rem;letter-spacing:.04em}
+.ttable tr.currow td{background:var(--surface-2)}
+.ttable td.new{background:var(--mark-soft)!important;font-weight:700;outline:2px solid var(--mark);outline-offset:-2px}
+
+/* ---------- range explorer ---------- */
+.rx{display:grid;gap:12px}
+.rxin{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.rxin label{display:flex;gap:6px;align-items:center;font-weight:700;font-family:var(--mono)}
+.rxin input{width:4.5em;border:2px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--surface-2);font-family:var(--mono);font-size:1.1rem}
+.rxmode button{padding:6px 10px;font-family:var(--mono);font-size:.82rem}
+.rxmode button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.rxboxes{display:flex;flex-wrap:wrap;gap:8px;min-height:4.2em;align-items:center}
+.rxbox{display:grid;place-items:center;min-width:3.4em;padding:6px 8px;border-radius:10px;background:var(--mark-soft);border:2px solid var(--mark);animation:pop .25s both}
+.rxbox small{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.rxbox b{font-family:var(--mono);font-size:1.4rem}
+.rxempty{font-weight:700;color:var(--bad)}
+@keyframes pop{from{transform:scale(.7)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){.rxbox{animation:none}}
+.mini{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.mini > div{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface)}
+.mini b.big{display:block;font-family:var(--mono);font-size:1.15rem}
+.code .lab{background:rgba(244,197,66,.22);border-radius:4px;box-shadow:0 0 0 1px rgba(244,197,66,.7)}
+.stage{grid-template-columns:minmax(0,1fr)}
+.stage > *, .panel > *, .cols > *{min-width:0}
+.rules2{grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr))}
+.parsons > *, .zone > *, .pline .txt{min-width:0}
+.annot > *, .arow > *{min-width:0}
+a.tbtn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}

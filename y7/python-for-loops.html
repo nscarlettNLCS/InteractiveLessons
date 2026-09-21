@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python For Loops</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="../shared/lesson.css">
+<script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="../firebase-config.js"></script>
+<script src="../shared/lesson.js"></script>
+</head>
+<body>
+<script>
+const L = Lesson, code = L.code;
+
+/* ---------- starter: bug hunts (one per level) ---------- */
+const BUG_SUPPORT = `name = "Minji"
+print("Hello, " + name
+print("Welcome to Computer Science!)`;
+const BUG_CORE = `age = 12
+if age > 10
+    Print("You can join the robotics club")
+else:
+print("Maybe next year")`;
+const BUG_STRETCH = `score = 75
+if score => 50:
+    print("Pass")
+    prnt("Well done")
+else
+    print("Try again)`;
+
+/* ---------- loop code ---------- */
+const REPEAT = `print("Go robot!")
+print("Go robot!")
+print("Go robot!")
+print("Go robot!")
+print("Go robot!")`;
+const LOOP5 = `for i in range(5):
+    print("Go robot!")`;
+const PREDICT = `for i in range(5):
+    print(i)`;
+const TOTAL = `total = 0
+for i in range(1, 5):
+    total = total + i
+print("Total:", total)`;
+const ROBOT = `for step in range(1, 5):
+    if step == 3:
+        print("Turn left!")
+    else:
+        print("Move forward")`;
+const EVEN = `for n in range(1, 5):
+    if n % 2 == 0:
+        print(n, "is even")`;
+
+/* ---------- make task ---------- */
+const MAKE_START = {
+  support: `for n in range(1, 11):
+    answer = 5 * n
+    # print the line, for example: 5 x 3 = 15
+    `,
+  core: `for number in range(1, 21):
+    # if number divides by 3 with no remainder, print "Fizz"
+    # otherwise, print the number
+    `,
+  stretch: `# FizzBuzz from 1 to 30
+# multiple of 3 and 5  -> FizzBuzz
+# multiple of 3 only   -> Fizz
+# multiple of 5 only   -> Buzz
+# otherwise            -> the number
+`};
+const upto = n => Array.from({length:n}, (_,k) => k+1);
+const MAKE_TESTS = {
+  support: [
+    {label:'Prints 10 lines', lines:10},
+    {label:'First line is 5 x 1 = 5', contains:'5 x 1 = 5'},
+    {label:'Last line is 5 x 10 = 50', contains:'5 x 10 = 50'},
+    {label:'Whole times table is correct', output: upto(10).map(n => `5 x ${n} = ${5*n}`).join('\n')}],
+  core: [
+    {label:'Prints 20 lines', lines:20},
+    {label:'3, 6 and 9 are replaced by Fizz', contains:['1\n2\nfizz\n4\n5\nfizz']},
+    {label:'Whole output from 1 to 20 is correct', output: upto(20).map(n => n % 3 ? n : 'Fizz').join('\n')}],
+  stretch: [
+    {label:'Prints 30 lines', lines:30},
+    {label:'15 and 30 print FizzBuzz', contains:['14\nfizzbuzz\n16', '29\nfizzbuzz']},
+    {label:'Whole output from 1 to 30 is correct', output: upto(30).map(n => n % 15 === 0 ? 'FizzBuzz' : n % 3 === 0 ? 'Fizz' : n % 5 === 0 ? 'Buzz' : n).join('\n')}]
+};
+
+/* ---------- investigate questions ---------- */
+const QS = [
+ ['support','What does <code>for</code> tell Python to do?','Repeat the indented lines underneath it.'],
+ ['support','How many times does <code>range(5)</code> repeat?','<b>5</b> times.'],
+ ['support','Which lines are repeated?','Only the lines that are <b>indented</b> under the <code>for</code> line.'],
+ ['core','Why does <code>range(5)</code> print 0 to 4 and not 1 to 5?','Python starts counting at <b>0</b>, and <code>range</code> stops <b>before</b> the stop number.'],
+ ['core','Change <code>i</code> to <code>count</code> in both places. Does it still work?','Yes. <code>i</code> is just a variable name. Any name works if you use the same one in both places.'],
+ ['core','What happens if you remove the indent before <code>print</code>?','An <b>IndentationError</b>. Python needs the indent to know which lines belong to the loop.'],
+ ['stretch','Make the program print 1 to 5 instead. How many different ways can you find?','<code>range(1, 6)</code>, or keep <code>range(5)</code> and print <code>i + 1</code>.'],
+ ['stretch','Add a line after the loop that is <b>not</b> indented. How many times does it run?','Once. Only indented lines are repeated.']];
+
+L.start({
+  root: '..',
+  title: 'Python For Loops',
+  subtitle: 'Year 7 · for, range(), trace tables, loops with if',
+  glossary: [
+    {term:'bug', ko:'버그 (오류)', def:'A mistake in a program that stops it working properly.'},
+    {term:'debug', ko:'디버그 (오류 수정)', def:'Find and fix the mistakes in a program.'},
+    {term:'syntax error', ko:'구문 오류', def:'A spelling or punctuation mistake in code, like a missing bracket or colon.'},
+    {term:'loop', ko:'반복문', def:'Code that repeats.'},
+    {term:'<code>for</code> loop', ko:'for 반복문', def:'A loop that repeats a set number of times.'},
+    {term:'iteration', ko:'반복 (한 번 돌기)', def:'One time round the loop.'},
+    {term:'loop variable', ko:'반복 변수', def:'The variable that changes each time round the loop, like <code>i</code>.'},
+    {term:'<code>range()</code>', ko:'범위', def:'Makes the numbers the loop counts through. <code>range(start, stop, step)</code>'},
+    {term:'indentation', ko:'들여쓰기', def:'The 4 spaces that show which lines are inside the loop.'},
+    {term:'trace table', ko:'추적표', def:'A table that shows how the variables change, one step at a time.'},
+    {term:'condition', ko:'조건', def:'A question that is True or False, like <code>step == 3</code>.'},
+    {term:'remainder · <code>%</code>', ko:'나머지', def:'What is left over after dividing. <code>7 % 2</code> is <code>1</code>.'}
+  ],
+  questions: {
+    't-colon': {type:'text', title:'Which symbol is missing from the end of an if line or an else line?', accept:[':','colon'], placeholder:'one symbol'},
+    'c-bugs': {type:'checkin', title:'Bug hunt: how did you get on?'},
+    'q-times': {title:'How many times will this print "Hip hip hooray!"?', opts:['2','3','4','It keeps going forever'], correct:1, code:'for i in range(3):\n    print("Hip hip hooray!")'},
+    'predict': {title:'What will this program print?', opts:['1 2 3 4 5','0 1 2 3 4','0 1 2 3 4 5','5'], correct:1, code:PREDICT},
+    't-var': {type:'text', title:'In  for i in range(5):  what is the name of the loop variable?', accept:['i'], placeholder:'one letter'},
+    'q-range1': {title:'Which numbers does range(1, 6) give?', opts:['1 2 3 4 5 6','0 1 2 3 4 5','1 2 3 4 5','2 3 4 5 6'], correct:2},
+    't-range': {type:'text', title:'Type the numbers that range(2, 10, 3) gives, separated by commas.', accept:['2, 5, 8','2 5 8'], mono:true, placeholder:'e.g. 1, 2, 3'},
+    'q-count': {title:'Which range() counts down 5, 4, 3, 2, 1?', opts:['range(5, 1)','range(5, 0, -1)','range(1, 5, -1)','range(5, 1, -1)'], correct:1},
+    'q-trace': {title:'Look at the trace table. What is total after the 3rd loop?', opts:['3','5','6','10'], correct:2},
+    't-lasti': {type:'text', title:'What is the last value of i in this loop?', accept:['4'], placeholder:'a number'},
+    'q-robot': {title:'How many times does the robot print "Move forward"?', opts:['1','3','4','5'], correct:1, code:ROBOT},
+    'q-even': {title:'What does this program print?', opts:['1 is even\n3 is even','2 is even\n4 is even','2 is even','Nothing'], correct:1, code:EVEN},
+    'c-parsons': {type:'checkin', title:'Parsons problem: how did you get on?'},
+    'c-gaps': {type:'checkin', title:'Fill the gaps: how did you get on?'},
+    'c-make': {type:'checkin', title:'Make: did your code pass the checks?'},
+    'ex1': {title:'How many times does a range(4) loop repeat?', opts:['3','4','5','0'], correct:1},
+    'ex2': {title:'What is the first number range(2, 6) gives?', opts:['0','1','2','6'], correct:2},
+    't-ex3': {type:'text', title:'Type the numbers range(0, 10, 5) gives, separated by commas.', accept:['0, 5','0 5'], mono:true, placeholder:'e.g. 1, 2'},
+    'ex4': {title:'What does this program print?', opts:['A\nA\nA','A\nB\nB','B\nA\nA','A\nB\nA'], correct:1, code:'for i in range(3):\n    if i == 0:\n        print("A")\n    else:\n        print("B")'},
+    'conf': {title:'How confident do you feel about for loops now?', opts:['1 · Not yet','2','3','4','5 · Very confident'], correct:-1}
+  },
+  stages: [
+    {key:'bugs', label:'Bug hunt', html:`
+      <div class="stage-head"><div><div class="eyebrow">Starter · 8 minutes</div><h2 id="h-bugs">Bug hunt: spot and fix the errors</h2></div>
+      <p class="lead">Each program has mistakes. Find them, then fix the code so it runs.</p></div>
+      <div class="mini">
+        <div><b class="big">( )</b>Every <code>(</code> needs a <code>)</code></div>
+        <div><b class="big">" "</b>Text needs quotes at <b>both</b> ends</div>
+        <div><b class="big">:</b><code>if</code> and <code>else</code> lines end with a colon</div>
+        <div><b class="big">⇥</b>Lines inside <code>if</code> / <code>else</code> are indented</div>
+      </div>
+      <div data-show="support"><div class="panel"><h3><span class="tier support">Support</span>2 bugs to find</h3><div id="bugS"></div></div></div>
+      <div data-show="core"><div class="panel"><h3><span class="tier core">Core</span>3 bugs to find</h3><div id="bugC"></div></div></div>
+      <div data-show="stretch"><div class="panel"><h3><span class="tier stretch">Stretch</span>4 bugs to find</h3><div id="bugX"></div></div></div>
+      <div class="cols"><div data-vote="t-colon"></div><div data-vote="c-bugs"></div></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Pairs find the bugs <b>before</b> anyone runs the code. Then run it and read the error message together: which line number does Python point to?</li>
+        <li>Point out that Python often reports the error on the line <i>after</i> a missing bracket or quote.</li>
+        <li>Answers — Support: line 2 missing <code>)</code>, line 3 missing closing <code>"</code>. Core: line 2 missing <code>:</code>, line 3 <code>Print</code> should be <code>print</code>, line 5 not indented. Stretch: line 2 <code>=&gt;</code> should be <code>&gt;=</code>, line 4 <code>prnt</code>, line 5 missing <code>:</code>, line 6 missing closing <code>"</code>.</li>
+        <li>Praise the method, not just the answer: "You checked every bracket — that's exactly what programmers do."</li></ul></div>`},
+
+    {key:'why', label:'Why loops?', html:`
+      <div class="stage-head"><div><div class="eyebrow">New idea</div><h2 id="h-why">Why do we need loops?</h2></div></div>
+      <div class="cols">
+        <div class="panel"><h3>Without a loop</h3>${code(REPEAT)}
+          <p class="small muted">What if the robot needed to say it 100 times?</p></div>
+        <div class="panel"><h3>With a <code>for</code> loop</h3>${code(LOOP5)}
+          <p>Two lines instead of five. To repeat 100 times, change <code>5</code> to <code>100</code>.</p>
+          <div class="bar"><button class="btn primary" id="whyRun">▶ Run it</button></div><pre class="out" id="whyOut" hidden></pre></div>
+      </div>
+      <div class="panel"><h3>By the end of this lesson I can…</h3>
+        <ul class="obj">
+          <li>find and fix common errors in Python code</li>
+          <li>write a <code>for</code> loop using <code>range()</code> with 1, 2 or 3 numbers</li>
+          <li>follow a trace table to see how a loop works</li>
+          <li>use an <code>if</code> statement inside a loop</li>
+        </ul></div>
+      <div data-vote="q-times"></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Ask: "Where do you see repeating in real life?" — a robot walking, a game level, a playlist, a microwave counting down.</li>
+        <li>Keep it quick. The vote is a first guess; the next stage explains how <code>range</code> counts.</li></ul></div>`},
+
+    {key:'predict', label:'Predict', primm:true, html:`
+      <div class="stage-head"><div><div class="eyebrow">PRIMM · Predict</div><h2 id="h-predict">What will this loop print?</h2></div>
+      <p class="lead">Don't run it yet. Agree a prediction with your partner.</p></div>
+      <div class="cols">
+        <div class="panel">${code(PREDICT)}
+          <p data-show="support" class="small"><span class="tier support">Support</span><code>print(i)</code> prints the <b>number</b> the loop is on, not the letter i.</p>
+          <p data-show="core" class="small"><span class="tier core">Core</span>Think: what number does Python start counting from?</p>
+          <p data-show="stretch" class="small"><span class="tier stretch">Stretch</span>How could you change it to print 1 to 5 without changing <code>range(5)</code>?</p></div>
+        <div data-vote="predict"></div>
+      </div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Most common wrong answer: <b>1 2 3 4 5</b>. Students expect counting to start at 1.</li>
+        <li>Don't reveal until the next stage — let the Run button show them.</li></ul></div>`},
+
+    {key:'run', label:'Run', primm:true, html:`
+      <div class="stage-head"><div><div class="eyebrow">PRIMM · Run and Investigate</div><h2 id="h-run">Run it. How does a for loop work?</h2></div></div>
+      <div class="cols">
+        <div class="panel"><h3>The parts of a for loop</h3>
+          <div class="code"><div class="ln"><i>1</i><span><span class="tk-k">for</span> <span class="lab">i</span> <span class="tk-k">in</span> <span class="lab"><span class="tk-f">range</span>(<span class="tk-n">5</span>)</span><span class="lab">:</span></span></div><div class="ln"><i>2</i><span><span class="lab">    </span><span class="tk-f">print</span>(i)</span></div></div>
+          <div class="legend">
+            <div><b>for</b>start a loop</div>
+            <div><b>i</b>the loop variable: it holds the number the loop is on</div>
+            <div><b>range(5)</b>the numbers to count through: 0, 1, 2, 3, 4</div>
+            <div><b>:</b>the colon starts the loop</div>
+            <div><b>indent</b>4 spaces: these lines repeat</div>
+          </div></div>
+        <div class="panel"><h3>Run it and test your ideas</h3><div id="runEd"></div></div>
+      </div>
+      <div class="panel"><ul class="qs">${QS.map(([lv,q,a])=>`<li data-show="${lv}"><details class="q"><summary><span class="tier ${lv}">${lv}</span><span>${q}</span></summary><div class="ans">${a}</div></details></li>`).join('')}</ul></div>
+      <div data-vote="t-var"></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Go back to the Predict vote and reveal it now. Celebrate anyone who said 0 to 4, and explain why the others were reasonable guesses.</li>
+        <li>Key points: counting starts at 0; <code>range</code> stops <b>before</b> the number; only indented lines repeat.</li></ul></div>`},
+
+    {key:'range', label:'range() explorer', html:`
+      <div class="stage-head"><div><div class="eyebrow">Parameters</div><h2 id="h-range">range() with 1, 2 or 3 numbers</h2></div>
+      <p class="lead">Change the numbers and watch which values the loop counts through.</p></div>
+      <div class="rules2">
+        <div class="rule g"><h3>range(stop)</h3><p>Starts at <b>0</b>, stops <b>before</b> stop.<br><code>range(4)</code> → 0, 1, 2, 3</p></div>
+        <div class="rule g"><h3>range(start, stop)</h3><p>Starts at <b>start</b>, stops <b>before</b> stop.<br><code>range(2, 6)</code> → 2, 3, 4, 5</p></div>
+        <div class="rule g"><h3>range(start, stop, step)</h3><p>Counts in <b>steps</b>.<br><code>range(0, 10, 2)</code> → 0, 2, 4, 6, 8</p></div>
+      </div>
+      <div class="panel"><div id="rangeHost"></div>
+        <div class="bar"><span class="small muted">Try these:</span>
+          <button class="btn" data-r="1,0,5,1">range(5)</button><button class="btn" data-r="2,1,6,1">range(1, 6)</button>
+          <button class="btn" data-r="3,0,10,2">range(0, 10, 2)</button><button class="btn" data-r="3,10,0,-1">range(10, 0, -1)</button>
+          <button class="btn" data-r="2,5,5,1">range(5, 5)</button></div></div>
+      <p data-show="support"><span class="tier support">Support</span>Say it out loud: "start at …, stop <b>before</b> …".</p>
+      <p data-show="stretch"><span class="tier stretch">Stretch</span>Find a <code>range()</code> that gives 3, 6, 9, 12, 15. Then find one that gives nothing at all.</p>
+      <div class="cols"><div data-vote="q-range1"></div><div data-vote="t-range"></div></div>
+      <div data-vote="q-count"></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Use the explorer live: ask a student for a start, stop and step, predict as a class, then type it in.</li>
+        <li><code>range(5, 5)</code> gives nothing — a good "what happened?" moment.</li>
+        <li>Counting down needs a negative step and a stop one past the last number: <code>range(5, 0, -1)</code>.</li></ul></div>`},
+
+    {key:'trace', label:'Trace tables', html:`
+      <div class="stage-head"><div><div class="eyebrow">Trace tables</div><h2 id="h-trace">Watch the loop, one step at a time</h2></div>
+      <p class="lead">A trace table shows how the variables change each time round the loop. You don't need to draw one — just follow it.</p></div>
+      <div id="traceHost"></div>
+      <p data-show="support"><span class="tier support">Support</span>Each new row is one more time round the loop. Watch the yellow box: it shows what just changed.</p>
+      <p data-show="stretch"><span class="tier stretch">Stretch</span>Predict the next row <b>before</b> pressing Next step. What would the total be with <code>range(1, 11)</code>?</p>
+      <div class="cols"><div data-vote="q-trace"></div><div data-vote="t-lasti"></div></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Before each click, ask "What will change next?" and take answers on mini whiteboards.</li>
+        <li>Stress the last step: the loop ends because <code>range(1, 5)</code> stops <b>before</b> 5. The <code>print</code> runs once because it isn't indented.</li>
+        <li>Stretch answer: <code>range(1, 11)</code> gives a total of 55.</li></ul></div>`},
+
+    {key:'parsons', label:'Parsons problem', html:`
+      <div class="stage-head"><div><div class="eyebrow">Parsons problem</div><h2 id="h-parsons">Build the 7 times table</h2></div>
+      <p class="lead">Put the lines in order to print 7 × 1 up to 7 × 10. Tap a line to add it.</p></div>
+      <p data-show="support"><span class="tier support">Support</span>The indentation is done. The variable is created first, then the loop.</p>
+      <p data-show="core"><span class="tier core">Core</span>Order the lines <b>and</b> set the indentation with ⇤ and ⇥.</p>
+      <p data-show="stretch"><span class="tier stretch">Stretch</span>Order and indent. <b>Two lines are not needed.</b></p>
+      <div id="parsonsHost"></div>
+      <div data-vote="c-parsons"></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Build it at the front with the class telling you the next line.</li>
+        <li>Stretch distractors: <code>range(1, 10)</code> would stop at 7 × 9, and a <code>print</code> outside the loop would only run once.</li>
+        <li>Expected output: <code>7 x 1 = 7</code> … <code>7 x 10 = 70</code>.</li></ul></div>`},
+
+    {key:'loopif', label:'Loops with if', html:`
+      <div class="stage-head"><div><div class="eyebrow">Loops + if</div><h2 id="h-loopif">Making decisions inside a loop</h2></div>
+      <p class="lead">The robot walks 4 steps. On step 3 it turns left. The <code>if</code> is checked <b>every</b> time round the loop.</p></div>
+      <div id="robotHost"></div>
+      <div data-vote="q-robot"></div>
+      <div class="cols">
+        <div class="panel"><h3>New symbol: <code>%</code> (remainder · 나머지)</h3>
+          <div class="mini">
+            <div><b class="big">7 % 2 = 1</b>7 ÷ 2 = 3, remainder 1</div>
+            <div><b class="big">8 % 2 = 0</b>8 ÷ 2 = 4, remainder 0</div>
+            <div><b class="big">n % 2 == 0</b>means n is <b>even</b></div>
+          </div>
+          <p class="small muted" style="margin-top:8px">If the remainder is 0, the number divides exactly.</p></div>
+        <div data-vote="q-even"></div>
+      </div>
+      <div class="panel"><h3>Try it</h3><div id="loopifEd"></div>
+        <p data-show="support" class="small"><span class="tier support">Support</span>Change <code>3</code> to <code>2</code> so the robot turns on step 2.</p>
+        <p data-show="core" class="small"><span class="tier core">Core</span>Make the robot print <code>"Beep!"</code> on step 4 as well. You'll need <code>elif</code>.</p>
+        <p data-show="stretch" class="small"><span class="tier stretch">Stretch</span>Make it 10 steps, turning left on every even step. Use <code>%</code>.</p></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Step through the trace table: the condition column shows True or False each time round. Ask "Which rows print Turn left?"</li>
+        <li>Indentation now has two levels: the <code>if</code> is inside the loop, and the <code>print</code> is inside the <code>if</code>.</li>
+        <li>Support students can skip <code>%</code> — the robot example is enough for today.</li></ul></div>`},
+
+    {key:'gaps', label:'Fill the gaps', html:`
+      <div class="stage-head"><div><div class="eyebrow">Fill the gaps</div><h2 id="h-gaps">Rocket countdown</h2></div>
+      <p class="lead">Count down from 10 to 1, say "Nearly there!" at 3, then "Lift off!".</p></div>
+      <div class="cols">
+        <div class="panel" id="gapsHost"></div>
+        <div class="panel"><h3>Think about it</h3><ul class="qs">
+          <li><details class="q"><summary>Why is the stop number 0 and not 1?</summary><div class="ans"><code>range</code> stops <b>before</b> the stop number, so to reach 1 you stop at 0.</div></details></li>
+          <li><details class="q"><summary>Why is "Lift off!" printed only once?</summary><div class="ans">It is <b>not indented</b>, so it runs after the loop has finished.</div></details></li>
+          <li data-show="stretch"><details class="q"><summary><span class="tier stretch">Stretch</span>Change it to count down in 2s from 20. What prints at the end?</summary><div class="ans"><code>range(20, 0, -2)</code> gives 20, 18 … 2, then "Lift off!". "Nearly there!" never prints, because 3 isn't in the list.</div></details></li>
+        </ul></div>
+      </div>
+      <div data-vote="c-gaps"></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Answers: <code>for</code>, <code>range</code>, <code>-1</code>, <code>:</code>, <code>==</code>.</li>
+        <li>Common mistake: using <code>=</code> instead of <code>==</code> in the <code>if</code>. One equals stores a value; two equals compares.</li></ul></div>`},
+
+    {key:'make', label:'Make', primm:true, html:`
+      <div class="stage-head"><div><div class="eyebrow">PRIMM · Make</div><h2 id="h-make">Your turn: write a loop</h2></div>
+      <p class="lead">Write your program, run it, then press <b>Check my code</b>.</p></div>
+      <div class="cols">
+        <div class="panel">
+          <div data-show="support"><h3><span class="tier support">Support</span>The 5 times table</h3>
+            <ol><li>The loop is written for you.</li><li>Add one <code>print</code> line inside the loop.</li><li>It should print <code>5 x 1 = 5</code> up to <code>5 x 10 = 50</code>.</li></ol>
+            <p class="small muted">Hint: <code>print(5, "x", n, "=", answer)</code></p></div>
+          <div data-show="core"><h3><span class="tier core">Core</span>Fizz</h3>
+            <p>Print the numbers 1 to 20. If a number is in the 3 times table, print <code>Fizz</code> instead.</p>
+            <p class="small muted">Hint: <code>if number % 3 == 0:</code></p></div>
+          <div data-show="stretch"><h3><span class="tier stretch">Stretch</span>FizzBuzz</h3>
+            <p>Print 1 to 30. Multiples of 3 print <code>Fizz</code>, multiples of 5 print <code>Buzz</code>, multiples of both print <code>FizzBuzz</code>.</p>
+            <p class="small muted">Think: which check must come first?</p></div>
+          <p class="small muted">Changing the level loads that level's starting code.</p>
+        </div>
+        <div class="panel"><div id="makeEd"></div></div>
+      </div>
+      <div data-vote="c-make"></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>10–12 minutes. Check in with the Support group within the first 3 minutes.</li>
+        <li>The checks compare the printed output exactly (spaces and capitals don't matter).</li>
+        <li>FizzBuzz: the <code>% 15</code> (or "3 and 5") check must come first, otherwise 15 prints Fizz.</li></ul></div>`},
+
+    {key:'exit', label:'Exit ticket', html:`
+      <div class="stage-head"><div><div class="eyebrow">Exit ticket</div><h2 id="h-exit">Check your understanding</h2></div>
+      <p class="lead">Answer on your device. Nobody sees the results until they're revealed.</p></div>
+      <div class="cols"><div data-vote="ex1"></div><div data-vote="ex2"></div></div>
+      <div data-vote="t-ex3"></div>
+      <div data-vote="ex4"></div>
+      <div data-vote="conf"></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Question 4 combines everything: the loop runs 3 times (0, 1, 2), and only the first time is <code>i == 0</code>.</li>
+        <li>Open <b>Results</b> and <b>Copy summary</b> for your records. Start next lesson with a retrieval question on whichever question scored lowest.</li></ul></div>`}
+  ],
+
+  ready(){
+    /* starter bug hunts */
+    L.bugHunt('#bugS', {code:BUG_SUPPORT, id:'bugSed',
+      bugs:[{line:2, what:'the bracket after <code>name</code> is missing: <code>print("Hello, " + name)</code>'},{line:3, what:'the closing quote is missing: <code>"Welcome to Computer Science!"</code>'}],
+      tests:[{label:'Prints Hello, Minji', contains:'Hello, Minji'},{label:'Prints the welcome message', contains:'Welcome to Computer Science!'}]});
+    L.bugHunt('#bugC', {code:BUG_CORE, id:'bugCed',
+      bugs:[{line:2, what:'the <code>if</code> line needs a colon at the end: <code>if age &gt; 10:</code>'},{line:3, what:'<code>Print</code> should be <code>print</code> — Python cares about capital letters'},{line:5, what:'the line under <code>else:</code> must be indented'}],
+      tests:[{label:'Prints the robotics club message', output:'You can join the robotics club'}]});
+    L.bugHunt('#bugX', {code:BUG_STRETCH, id:'bugXed',
+      bugs:[{line:2, what:'"greater than or equal" is written <code>&gt;=</code>, not <code>=&gt;</code>'},{line:4, what:'<code>prnt</code> is misspelt'},{line:5, what:'<code>else</code> needs a colon'},{line:6, what:'the closing quote is missing'}],
+      tests:[{label:'Prints Pass then Well done', output:'Pass\nWell done'}]});
+
+    L.$('#whyRun').onclick = async () => { const o = L.$('#whyOut'); o.hidden = false; L.showResult(o, await L.run(LOOP5)); };
+    L.editor('#runEd', PREDICT, {id:'runCode'});
+
+    const rx = L.rangeExplorer('#rangeHost', {mode:1, start:0, stop:5, step:1});
+    L.$$('[data-r]').forEach(b => b.onclick = () => { const [m,s,e,p] = b.dataset.r.split(',').map(Number); rx.set({mode:m, start:s, stop:e, step:p}); });
+
+    L.loopTrace('#traceHost', {code:TOTAL, cols:['i','total'], steps:[
+      {l:1, row:true, set:{total:0}, say:'<code>total</code> starts at <b>0</b>. The loop hasn\'t started yet.'},
+      {l:2, row:true, set:{i:1}, say:'Loop 1: <code>range(1, 5)</code> gives its first number, so <code>i</code> is <b>1</b>.'},
+      {l:3, set:{total:1}, say:'<code>total = 0 + 1</code>, so total is now <b>1</b>.'},
+      {l:2, row:true, set:{i:2}, say:'Loop 2: <code>i</code> is <b>2</b>.'},
+      {l:3, set:{total:3}, say:'<code>total = 1 + 2</code> = <b>3</b>.'},
+      {l:2, row:true, set:{i:3}, say:'Loop 3: <code>i</code> is <b>3</b>.'},
+      {l:3, set:{total:6}, say:'<code>total = 3 + 3</code> = <b>6</b>.'},
+      {l:2, row:true, set:{i:4}, say:'Loop 4: <code>i</code> is <b>4</b>.'},
+      {l:3, set:{total:10}, say:'<code>total = 6 + 4</code> = <b>10</b>.'},
+      {l:2, say:'<code>range(1, 5)</code> stops <b>before</b> 5, so there are no more numbers. The loop ends.'},
+      {l:4, out:'Total: 10', say:'Line 4 is not indented, so it runs <b>once</b>, after the loop.'}]});
+
+    L.parsons('#parsonsHost', {
+      lines:[
+        {id:'a', t:'number = 7', ind:0},
+        {id:'b', t:'for i in range(1, 11):', ind:0},
+        {id:'c', t:'answer = number * i', ind:1},
+        {id:'d', t:'print(number, "x", i, "=", answer)', ind:1}],
+      distract:[{id:'x', t:'for i in range(1, 10):', ind:0},{id:'y', t:'print("7 x", i)', ind:0}],
+      order:['a','b','c','d']});
+
+    L.loopTrace('#robotHost', {code:ROBOT, cols:['step','step == 3'], steps:[
+      {l:1, row:true, set:{step:1}, say:'Loop 1: <code>step</code> is 1.'},
+      {l:2, set:{'step == 3':'False'}, say:'Is 1 equal to 3? <b>False</b>, so Python jumps to <code>else</code>.'},
+      {l:5, out:'Move forward', say:'The <code>else</code> part runs.'},
+      {l:1, row:true, set:{step:2}, say:'Loop 2: <code>step</code> is 2.'},
+      {l:2, set:{'step == 3':'False'}, say:'Is 2 equal to 3? <b>False</b>.'},
+      {l:5, out:'Move forward', say:'The <code>else</code> part runs again.'},
+      {l:1, row:true, set:{step:3}, say:'Loop 3: <code>step</code> is 3.'},
+      {l:2, set:{'step == 3':'True'}, say:'Is 3 equal to 3? <b>True!</b>'},
+      {l:3, out:'Turn left!', say:'This time the <code>if</code> part runs.'},
+      {l:1, row:true, set:{step:4}, say:'Loop 4: <code>step</code> is 4.'},
+      {l:2, set:{'step == 3':'False'}, say:'Is 4 equal to 3? <b>False</b>.'},
+      {l:5, out:'Move forward', say:'The <code>else</code> part runs. <code>range(1, 5)</code> has no more numbers, so the program ends.'}]});
+    L.editor('#loopifEd', ROBOT, {id:'loopifCode'});
+
+    L.gaps('#gapsHost', {
+      template:`__G0__ count in __G1__(10, 0, __G2__)__G3__
+    print(count)
+    if count __G4__ 3:
+        print("Nearly there!")
+print("Lift off!")`,
+      gaps:[
+        {a:'for', hint:'The keyword that starts a loop.'},
+        {a:'range', hint:'This makes the numbers to count through.'},
+        {a:'-1', hint:'Counting down means the step is negative.'},
+        {a:':', hint:'Every for line ends with this symbol.'},
+        {a:'==', hint:'Two equals signs compare. One equals sign stores a value.'}],
+      bank:['for','range','-1',':','==','while','1','=',';','print'],
+      build: v => `${v[0]} count in ${v[1]}(10, 0, ${v[2]})${v[3]}\n    print(count)\n    if count ${v[4]} 3:\n        print("Nearly there!")\nprint("Lift off!")`});
+
+    const makeEd = L.editor('#makeEd', MAKE_START.core, {id:'makeCode', tests: () => MAKE_TESTS[document.body.dataset.level]});
+    L.onLevel(lv => makeEd.set(MAKE_START[lv]));
+  }
+});
+</script>
+</body>
+</html>
