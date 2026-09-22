@@ -513,3 +513,11 @@ html, body, code, pre, kbd, samp, textarea, input, button, .code, .gapcode, .out
 .picklist{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px;max-height:40vh;overflow:auto}
 .picklist span{border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:.85rem;background:var(--surface)}
 .picklist span.done{background:var(--surface-2);color:var(--muted);text-decoration:line-through}
+/* picked-student message */
+.spicked{position:fixed;inset:0;z-index:300;display:grid;place-items:center;padding:16px;background:rgba(10,40,24,.55)}
+.spicked .spin{background:#1E8E4E;color:#fff;border-radius:22px;padding:28px 32px;max-width:640px;width:100%;text-align:center;display:grid;gap:12px;box-shadow:0 20px 60px rgba(0,0,0,.35);animation:pickpop .35s ease-out}
+.spicked .big{font-family:var(--display);font-weight:800;font-size:clamp(1.8rem,5vw,3rem);line-height:1.1}
+.spicked .sub{font-size:1.1rem}
+.spicked .btn{justify-self:center;background:#fff;color:#14532D;border:0;font-weight:800;padding:10px 28px}
+@keyframes pickpop{from{transform:scale(.85);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.spicked .spin{animation:none}}

@@ -879,6 +879,9 @@ const Live = (() => {
   return {
     panel, get on(){ return st.on; }, get joined(){ return st.joined; }, get done(){ return st.done; },
     get follow(){ return st.follow; }, setFollow(on){ if(st.on) follow(on); },
+    pick(name){ if(!st.on) return; const uids = {};
+      Object.entries(st.names).forEach(([u,n]) => { if(String(n||'').trim() === name) uids[u] = true; });
+      if(Object.keys(uids).length) upd({picked: {at: Date.now(), uids}}); },
     names(){ return [...new Set(Object.values(st.names).map(n => String(n||'').trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b)); },
     sessionData, tableText, get cls(){ return clsId(); },
     stage(key){ if(st.on) upd({stage:key}); },
@@ -1041,7 +1044,7 @@ const Student = (() => {
       if(!snap.exists()) throw new Error('Room not found. Check the code on the board.');
       st.uid = auth.currentUser.uid;
       await st.db.ref(`rooms/${c}/joined/${st.uid}`).set({name});
-      st.name = name; store.set('lesson-student-name', name); st.lastJump = null;
+      st.name = name; store.set('lesson-student-name', name); st.lastJump = null; st.lastPick = undefined;
       st.code = c; st.on = true; st.ended = false; st.sent = new Set();
       document.body.classList.add('joined');
       const ref = st.db.ref('rooms/'+c), cb = ref.on('value', s => onRoom(s.val()));
@@ -1062,9 +1065,20 @@ const Student = (() => {
     if(locked() && r.stage){ const i = STAGES.findIndex(s => s.key === r.stage); if(i >= 0 && i !== cur) go(i, true); }
     Object.values(widgets).forEach(w => w.update());
     /* when the teacher opens a question, take the student straight to it (once per opening) */
+    /* picked by the teacher: show a green message on this student's screen only */
+    const pk = r.picked;
+    if(st.lastPick === undefined) st.lastPick = pk ? pk.at : 0;   // ignore a pick from before this student joined
+    else if(pk && pk.at !== st.lastPick){ st.lastPick = pk.at; if(pk.uids && pk.uids[st.uid]) picked(); }
     const key = r.open && r.active ? r.active + ':' + (r.openedAt || '') : '';
     if(key && key !== st.lastJump){ st.lastJump = key; jumpTo(r.active); }
     status(); toast();
+  }
+  function picked(){
+    let o = $('#sPicked');
+    if(!o){ o = el(`<div class="spicked" id="sPicked" role="alertdialog" aria-live="assertive" aria-label="You have been picked"><div class="spin"><div class="big">🙋 You've been picked!</div><div class="sub">Your teacher would like you to answer. · 선생님이 당신을 선택했어요!</div><button class="btn">OK</button></div></div>`);
+      document.body.appendChild(o); $('button', o).onclick = () => { o.hidden = true; clearTimeout(o._t); }; }
+    o.hidden = false; clearTimeout(o._t); o._t = setTimeout(() => { o.hidden = true; }, 10000);
+    $('button', o).focus();
   }
   function jumpTo(id){
     const hostEl = $(`[data-vote="${id}"]`), stg = hostEl && hostEl.closest('.stage'); if(!stg) return;
@@ -1329,7 +1343,7 @@ function shell(cfg){
     if(names.length){
       let pool = names.filter(n => !usedNames.includes(n));
       if(!pool.length){ usedNames = []; pool = names.slice(); }
-      const pick = pool[Math.floor(Math.random()*pool.length)]; usedNames.push(pick); spinTo(names, pick); return; }
+      const pick = pool[Math.floor(Math.random()*pool.length)]; usedNames.push(pick); spinTo(names, pick); setTimeout(() => Live.pick(pick), 700); return; }
     const n = Math.max(2, Math.min(40, +$('#classSize').value || 24));
     let pool = []; for(let i=1;i<=n;i++) if(!used.includes(i)) pool.push(i);
     if(!pool.length){ used = []; pool = Array.from({length:n},(_,i)=>i+1); }
