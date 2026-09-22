@@ -687,19 +687,17 @@ function rangeExplorer(sel, cfg){
 const YEARS = [5,6,7,8,9,10,11,12,13];
 const classLetters = y => y <= 9 ? 'ABCDEFGH'.split('') : y <= 11 ? 'ABCD'.split('') : ['IB'];
 const yearLabel = y => y >= 12 ? `Year ${y} IB` : `Year ${y}`;
-const SCHOOL_DOMAIN = window.SCHOOL_DOMAIN || 'nlcsjeju.kr';
 const store = { get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k, v){ try{ if(v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); }catch(e){} } };
 const safeCell = v => (typeof v === 'string' && /^[=+\-@]/.test(v)) ? "'" + v : v;
 
 const Live = (() => {
-  const st = {on:false, code:'', db:null, uid:'', active:'', open:false, joined:0, names:{}, refs:[], follow:true, done:{},
-    cls: null, signin: store.get('lesson-signin') === 'google', saved:null, saving:false, msg:''};
+  const st = {on:false, code:'', db:null, uid:'', active:'', open:false, joined:0, names:{}, refs:[], follow:false, done:{},
+    cls: null};
   const cfgOK = () => !!(window.firebase && window.FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey && !/PASTE/i.test(FIREBASE_CONFIG.apiKey) && FIREBASE_CONFIG.databaseURL);
   const body = () => $('#liveBody');
   const joinURL = () => new URL(ROOT.replace(/\/?$/, '/') + 'vote.html', location.href).href.split(/[?#]/)[0] + '?room=' + st.code;
   const studentURL = () => location.origin + location.pathname + '?student&room=' + st.code;
   const shortURL = () => joinURL().replace(/^https?:\/\//, '').split('?')[0];
-  const sheetsURL = () => store.get('lesson-sheets-url') || '';
   const lessonYear = () => { const m = location.pathname.match(/\/y(\d+)\//i); return m ? +m[1] : null; };
   /* default class: last used if it is in this lesson's year, otherwise just the year */
   (function(){ const last = store.get('lesson-last-class'), ly = lessonYear();
@@ -712,62 +710,37 @@ const Live = (() => {
     const y = st.cls.y, letters = classLetters(y);
     return `<div class="clspick"><div class="clsrow"><label for="clsYear"><b>Class</b></label>
         <select id="clsYear">${YEARS.map(v => `<option value="${v}"${v===y?' selected':''}>${yearLabel(v)}</option>`).join('')}</select></div>
-      <div class="clsbtns" role="group" aria-label="Class">${letters.map(l => `<button data-l="${l}" aria-pressed="${st.cls.l===l}">${y>=12?`${y} IB`:`${y}${l}`}</button>`).join('')}<button data-l="none" class="none" aria-pressed="${st.cls.l==='none'}">No class (don't save)</button></div></div>`;
+      <div class="clsbtns" role="group" aria-label="Class">${letters.map(l => `<button data-l="${l}" aria-pressed="${st.cls.l===l}">${y>=12?`${y} IB`:`${y}${l}`}</button>`).join('')}<button data-l="none" class="none" aria-pressed="${st.cls.l==='none'}">No class</button></div></div>`;
   }
   function bindPicker(){
     $('#clsYear').onchange = e => { st.cls = {y:+e.target.value, l: classLetters(+e.target.value).length === 1 ? 'IB' : ''}; afterCls(); };
     $$('.clsbtns button').forEach(b => b.onclick = () => { st.cls.l = b.dataset.l; afterCls(); });
   }
-  function afterCls(){ if(clsId()) store.set('lesson-last-class', clsId()); if(st.on) upd({cls: clsId()}); st.saved = null; panel(); }
-  function sheetSetup(){
-    const u = sheetsURL();
-    return `<details class="sheetset"${u?'':' open'}><summary>${u ? '✓ Saving to Google Sheets is set up' : 'Set up saving to Google Sheets'}</summary>
-      <p class="small muted">Paste the web app link from your Apps Script (see SHEETS-SETUP.md). It is kept on this computer only.</p>
-      <div class="bar"><input id="sheetUrl" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(u)}" spellcheck="false" autocomplete="off"><button class="btn" id="sheetSave">Save link</button><button class="btn" id="sheetTest">Test</button></div>
-      <p class="small" id="sheetMsg" aria-live="polite"></p></details>`;
-  }
-  function bindSheet(){
-    const msg = t => { const m = $('#sheetMsg'); if(m) m.textContent = t; };
-    $('#sheetSave').onclick = () => { const v = $('#sheetUrl').value.trim();
-      if(v && !/^https:\/\/script\.google(usercontent)?\.com\//.test(v)){ msg('That doesn\'t look like an Apps Script web app link.'); return; }
-      store.set('lesson-sheets-url', v || null); msg(v ? 'Saved on this computer.' : 'Removed.'); };
-    $('#sheetTest').onclick = async () => { const v = $('#sheetUrl').value.trim(); if(!v){ msg('Paste the link first.'); return; }
-      msg('Testing…'); try{ const r = await fetch(v); const j = await r.json(); msg(j.ok ? '✓ Connected: ' + (j.message || 'OK') : 'The script answered with an error: ' + (j.error || '')); }
-      catch(e){ msg('Could not reach the script. Check the link and that the deployment allows "Anyone".'); } };
-  }
+  function afterCls(){ if(clsId()) store.set('lesson-last-class', clsId()); if(st.on) upd({cls: clsId()}); panel(); }
   function panel(msg){
     if(!cfgOK()){ body().innerHTML = '<p class="lmsg">Live answering isn\'t set up on this copy. Follow README.md to connect a free Firebase project. You can still count hands by tapping the options.</p>'; return; }
     if(!st.on){
-      body().innerHTML = `${msg?`<p class="lmsg">${msg}</p>`:''}<p>Start a session so students can answer on their own devices.</p>
+      body().innerHTML = `${msg?`<p class="lmsg">${msg}</p>`:''}<p>Start a session so students can answer on their own devices. They join with the room code and type their name.</p>
         ${classPicker()}
-        <label class="followtog"><input type="checkbox" id="signinTog" ${st.signin?'checked':''}> <span><b>Students sign in with their school Google account</b><br><span class="small muted">Their names are saved with their answers. Untick for anonymous answers.</span></span></label>
-        ${sheetSetup()}
         <div class="bar" style="margin-top:10px"><button class="btn primary" id="liveStart">Start a live session${clsId() ? ' for ' + clsId() : ''}</button></div>`;
-      bindPicker(); bindSheet();
-      $('#signinTog').onchange = e => { st.signin = e.target.checked; store.set('lesson-signin', st.signin ? 'google' : 'anon'); };
+      bindPicker();
       $('#liveStart').onclick = start; return; }
-    const cid = clsId(), su = sheetsURL();
     const names = Object.values(st.names).filter(Boolean).sort();
     body().innerHTML = `<p class="small muted" style="text-align:center">Students go to this address and type the room code</p>
       <div class="joinurl big">${esc(shortURL())}</div>
       <div class="roomcode">${st.code}</div><div class="qr" id="qr"></div>
       <p class="small muted" style="text-align:center">On a laptop, the code opens this lesson in student view. On a phone, it opens the answer page. The QR code opens the student view directly.</p>
-      <p style="text-align:center;margin-top:8px"><b id="joinedN">${st.joined}</b> devices joined${st.signin ? ' · sign-in on' : ''}</p>
+      <p style="text-align:center;margin-top:8px"><b id="joinedN">${st.joined}</b> devices joined</p>
       ${names.length ? `<details class="whojoined"><summary>Who has joined (${names.length})</summary><p class="small">${names.map(esc).join(', ')}</p></details>` : ''}
-      <label class="followtog"><input type="checkbox" id="followTog" ${st.follow?'checked':''}> <span><b>Students follow my screen</b><br><span class="small muted">Untick to let students move through the lesson at their own pace.</span></span></label>
+      <label class="followtog"><input type="checkbox" id="followTog" ${st.follow?'checked':''}> <span><b>Lock students to my screen</b><br><span class="small muted">Off: students move freely, and jump to a question when you open it. On: their screen follows yours.</span></span></label>
       <div class="savebox">
         ${classPicker()}
-        <div class="bar">${cid && su ? `<button class="btn mark" id="sheetGo"${st.saving?' disabled':''}>${st.saving ? 'Saving…' : st.saved ? 'Save again (updates the tab)' : 'Save to Google Sheet'}</button>` : ''}<button class="btn" id="csvGo">Download CSV</button></div>
-        <p class="small" id="saveMsg" aria-live="polite">${st.msg || (!cid ? 'Choose a class to save results.' : !su ? 'Set up Google Sheets below to save automatically.' : `Results for <b>${esc(cid)}</b> are saved when you end the session.`)}</p>
-        ${st.saved ? `<p class="small"><a href="${esc(st.saved.url)}" target="_blank" rel="noopener">Open ${esc(st.saved.book || cid + ' results')} ↗</a></p>` : ''}
-        ${sheetSetup()}
+        <p class="small muted">At the end of the lesson, open <b>Results</b> and press <b>Copy student results</b> before you end the session.</p>
       </div>
       <p class="small muted"><a href="${esc(studentURL())}" target="_blank" rel="noopener">Open the student view</a> to check what students see.</p>
       <div class="bar" style="margin-top:10px;justify-content:center"><button class="btn" id="liveEnd">End session</button></div>`;
     $('#followTog').onchange = e => follow(e.target.checked);
-    bindPicker(); bindSheet();
-    if($('#sheetGo')) $('#sheetGo').onclick = () => save();
-    $('#csvGo').onclick = csv;
+    bindPicker();
     try{ new QRCode($('#qr'), {text: studentURL(), width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M}); }catch(e){ const q = $('#qr'); if(q) q.remove(); }
     $('#liveEnd').onclick = end;
   }
@@ -783,8 +756,8 @@ const Live = (() => {
       let code = '';
       for(let i=0;i<6;i++){ code = makeCode(); const snap = await st.db.ref('rooms/'+code).get(); if(!snap.exists()) break; }
       await st.db.ref('rooms/'+code).set({owner: st.uid, created: Date.now(), active:'', open:false, reveal:-1, lesson: (document.title||''), page: location.pathname,
-        stage: STAGES[cur] ? STAGES[cur].key : '', follow: true, signin: st.signin ? 'google' : 'anon', cls: clsId()});
-      st.follow = true; st.saved = null; st.msg = '';
+        stage: STAGES[cur] ? STAGES[cur].key : '', follow: false, cls: clsId()});
+      st.follow = false;
       st.code = code; st.on = true; document.body.classList.add('live'); $('#liveBtn').setAttribute('aria-pressed', true);
       const vref = st.db.ref(`rooms/${code}/votes`);
       const vcb = vref.on('value', snap => { const v = snap.val() || {};
@@ -810,9 +783,11 @@ const Live = (() => {
     const uids = new Set(Object.keys(joined));
     Object.values(votes).forEach(v => Object.keys(v||{}).forEach(u => uids.add(u)));
     Object.values(dn).forEach(v => Object.keys(v||{}).forEach(u => uids.add(u)));
-    const studs = [...uids].map(u => { const j = joined[u]; return (j && typeof j === 'object') ? {u, name:String(j.name||j.email||''), email:String(j.email||'')} : {u, name:'', email:''}; })
+    const studs = [...uids].map(u => { const j = joined[u]; return {u, name: (j && typeof j === 'object') ? String(j.name||'').replace(/\s+/g,' ').trim() : ''}; })
       .sort((a,b) => (a.name?0:1) - (b.name?0:1) || a.name.localeCompare(b.name));
-    let an = 0; studs.forEach(s => { if(!s.name) s.name = 'Anonymous ' + (++an); });
+    let an = 0; const seen = {};
+    studs.forEach(s => { if(!s.name){ s.name = 'Anonymous ' + (++an); s.anon = true; return; }
+      const k = s.name.toLowerCase(); seen[k] = (seen[k] || 0) + 1; if(seen[k] > 1) s.name += ` (${seen[k]})`; });
     const si = key => STAGES.findIndex(s => s.key === key);
     const stageOf = h => { const g = h.closest('.stage'); return g ? g.id.replace(/^st-/,'') : ''; };
     const stageLabel = k => { const i = si(k); return i >= 0 ? STAGES[i].label : k; };
@@ -851,7 +826,7 @@ const Live = (() => {
     const markedCols = cols.filter(c => c.marked);
     const rows = studs.map(s => {
       const right = markedCols.filter(c => c.cell[s.u] && c.cell[s.u].ok).length;
-      return {name: safeCell(s.name), email: s.email, cells: cols.map(c => { const x = c.cell[s.u]; return x ? {v: safeCell(x.v), s: x.s} : {v:'', s:''}; }),
+      return {name: safeCell(s.name), anon: !!s.anon, cells: cols.map(c => { const x = c.cell[s.u]; return x ? {v: safeCell(x.v), s: x.s} : {v:'', s:''}; }),
         score: markedCols.length ? `${right}/${markedCols.length}` : '', pct: markedCols.length ? Math.round(right/markedCols.length*100) : ''}; });
     const classRow = cols.map(c => { const xs = Object.values(c.cell), n = xs.length;
       if(c.marked){ const k = xs.filter(x => x.ok).length; return `${n ? Math.round(k/n*100) : 0}% (${k}/${n})`; }
@@ -861,50 +836,30 @@ const Live = (() => {
     const avg = pcts.length ? Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length) : '';
     const now = new Date(r.created || Date.now()), lesson = LESSON.title || document.title;
     const dShort = `${now.getDate()} ${'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[now.getMonth()]}`, dLong = now.toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'long', year:'numeric'}) + ' ' + now.toTimeString().slice(0,5);
-    return { v:1, cls: clsId(), year: st.cls.y, yearLabel: yearLabel(st.cls.y), lesson, date: now.toISOString(),
-      tabName: `${dShort} · ${lesson}`.slice(0, 90), replace: st.saved ? st.saved.tab : '',
-      title: `${clsId()} · ${lesson}`, subtitle: `${dLong} · ${studs.length} students · room ${st.code}${avg !== '' ? ' · class average ' + avg + '%' : ''}`,
+    return { v:2, cls: clsId(), year: st.cls.y, yearLabel: yearLabel(st.cls.y), lesson, date: now.toISOString(),
+      tabName: `${dShort} · ${lesson}`.slice(0, 90),
+      title: clsId() ? `${clsId()} · ${lesson}` : lesson, subtitle: `${dLong} · ${studs.length} students · room ${st.code}${avg !== '' ? ' · class average ' + avg + '%' : ''}`,
       columns: cols.map(c => ({h: safeCell(c.h), note: c.note || ''})), rows, classRow, classAvg: avg === '' ? '' : avg,
       code: code.map(c => ({name: safeCell(c.name), task: safeCell(c.task), tests: c.tests, code: safeCell(c.code)})) };
   }
-  async function save(){
-    const url = sheetsURL(), cid = clsId();
-    if(!url || !cid || st.saving) return false;
-    st.saving = true; st.msg = 'Saving to Google Sheets…'; if(!$('#livePanel').hidden) panel();
-    let ok = false;
-    try{
-      const data = await sessionData();
-      const res = await fetch(url, {method:'POST', body: JSON.stringify(data)});
-      const j = await res.json();
-      if(!j.ok) throw new Error(j.error || 'The script returned an error');
-      st.saved = {url: j.url, tab: j.tab, book: j.book}; st.msg = `✓ Saved to “${j.book}”, tab “${j.tab}”.`; ok = true;
-    }catch(e){ console.error(e); st.msg = 'Saving failed: ' + (e.message || e) + '. Try again, or download the CSV.'; }
-    st.saving = false; if(!$('#livePanel').hidden) panel();
-    return ok;
-  }
-  async function csv(){
-    try{
-      const d = await sessionData();
-      const q = x => { const s = String(x ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
-      const lines = [['Student','Email'].concat(d.columns.map(c => c.h)).concat(['Score','%'])]
-        .concat(d.rows.map(r => [r.name, r.email].concat(r.cells.map(c => c.v)).concat([r.score, r.pct])))
-        .concat([['Class',''].concat(d.classRow).concat(['', d.classAvg])]);
-      const blob = new Blob(['﻿' + lines.map(l => l.map(q).join(',')).join('\r\n')], {type:'text/csv'});
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `${d.cls || 'class'} ${d.tabName}.csv`.replace(/[\\/:*?"<>|]/g,' '); document.body.appendChild(a); a.click(); a.remove();
-    }catch(e){ console.error(e); alert('Could not make the CSV: ' + (e.message || e)); }
+  /* one row per student, tab-separated so it pastes into Google Sheets or Excel as a grid */
+  async function tableText(){
+    const d = await sessionData();
+    const cell = x => String(x ?? '').replace(/[\t\r\n]+/g, ' ').replace(/^'/, '').replace(/^([=+\-@])/, ' $1');
+    const head = [d.title, d.subtitle].join(' · ');
+    const lines = [[head], ['Student'].concat(d.columns.map(c => c.h)).concat(['Score','%'])]
+      .concat(d.rows.map(r => [r.name].concat(r.cells.map(c => c.v)).concat([r.score, r.pct])))
+      .concat([['Class'].concat(d.classRow).concat(['', d.classAvg])]);
+    return {text: lines.map(l => l.map(cell).join('\t')).join('\n'), n: d.rows.length};
   }
   async function end(){
-    if(clsId() && sheetsURL()){
-      const ok = await save();
-      if(!ok && !confirm('The results could not be saved to Google Sheets.\n\nEnd the session anyway? Press Cancel to try again or download the CSV first.')) return;
-    }
+    if(st.joined && !confirm('End the session?\n\nStudents\' answers are deleted when the session ends. If you need them, press Cancel, then open Results and press "Copy student results" first.')) return;
     st.refs.forEach(([r,cb]) => r.off('value', cb)); st.refs = [];
     try{ await st.db.ref('rooms/'+st.code).remove(); }catch(e){}
     st.on = false; st.code = ''; st.active = ''; st.open = false; st.names = {};
     document.body.classList.remove('live'); $('#liveBtn').setAttribute('aria-pressed', false);
     Object.values(WIDGETS).forEach(w => { w.setLive([], {}); w.setState('', false); }); st.done = {}; pills();
-    const keep = st.saved; panel(keep ? `Session ended. ${esc(st.msg)} <a href="${esc(keep.url)}" target="_blank" rel="noopener">Open the sheet ↗</a>` : ''); dockLabel();
+    panel(); dockLabel();
   }
   function pills(){ $$('.donepill').forEach(p => { p.hidden = !st.on; $('b', p).textContent = st.done[p.dataset.for] || 0; }); }
   function follow(on){ st.follow = !!on; upd({follow: st.follow, stage: STAGES[cur] ? STAGES[cur].key : ''}); }
@@ -913,9 +868,9 @@ const Live = (() => {
   const upd = obj => st.on ? st.db.ref('rooms/'+st.code).update(obj).catch(e => console.error(e)) : Promise.resolve();
   return {
     panel, get on(){ return st.on; }, get joined(){ return st.joined; }, get done(){ return st.done; },
-    sessionData, save, csv,
+    sessionData, tableText, get cls(){ return clsId(); },
     stage(key){ if(st.on) upd({stage:key}); },
-    open(id, q){ if(!st.on){ togglePanel(true); return; } st.active = id; st.open = true; states(); upd({active:id, open:true, reveal:-1, revealed:false, question:q}); },
+    open(id, q){ if(!st.on){ togglePanel(true); return; } st.active = id; st.open = true; states(); upd({active:id, open:true, reveal:-1, revealed:false, question:q, openedAt: Date.now()}); },
     close(){ if(!st.on) return; st.open = false; states(); upd({open:false}); },
     reveal(id, payload){ if(!st.on) return; const o = {['answers/'+id]: payload};
       if(st.active === id){ st.open = false; states(); o.open = false; o.revealed = true; if(payload.c !== undefined) o.reveal = payload.c; }
@@ -1012,22 +967,21 @@ function studentAsk(sel, id, q){
 }
 
 const Student = (() => {
-  const st = {on:false, code:'', uid:'', db:null, room:null, off:null, ended:false, sent:new Set(), pendingDone:new Set(), pendingCode:'', name:''};
+  const st = {on:false, code:'', uid:'', db:null, room:null, off:null, ended:false, sent:new Set(), pendingDone:new Set(), name:'', lastJump:null};
   const widgets = {};
   const cfgOK = () => !!(window.firebase && window.FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey && !/PASTE/i.test(FIREBASE_CONFIG.apiKey) && FIREBASE_CONFIG.databaseURL);
   const locked = () => !!(st.on && st.room && st.room.follow !== false);
   function bar(){
     const b = $('#sBar'); if(!b) return;
-    if(!st.on && st.pendingCode){
-      b.innerHTML = `<span class="room">Room ${esc(st.pendingCode)}</span><span>Your teacher wants you to sign in first.</span><button class="btn primary gbtn" id="sGoogle"><span class="g" aria-hidden="true">G</span> Sign in with your school Google account</button><span class="serr" id="sErr" aria-live="polite"></span>`;
-      $('#sGoogle').onclick = googleSignIn; return;
-    }
     if(!st.on){
       if(!cfgOK()){ b.innerHTML = '<span class="small muted">Working on your own</span>'; return; }
-      b.innerHTML = `${st.ended ? '<span class="small muted">The session ended. You can keep working.</span>' : ''}<input id="sCode" class="scode" maxlength="5" placeholder="Room code" aria-label="Room code" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn primary" id="sJoin">Join class</button><span class="serr" id="sErr" aria-live="polite"></span>`;
+      b.innerHTML = `${st.ended ? '<span class="small muted">The session ended. You can keep working.</span>' : ''}<input id="sCode" class="scode" maxlength="5" placeholder="Room code" aria-label="Room code" autocomplete="off" autocapitalize="characters" spellcheck="false"><input id="sName" class="sname-in" maxlength="40" placeholder="Your full name" aria-label="Your full name" autocomplete="name" spellcheck="false"><button class="btn primary" id="sJoin">Join class</button><span class="serr" id="sErr" aria-live="polite"></span>`;
       const qp = new URLSearchParams(location.search).get('room'); if(qp && !st.ended) $('#sCode').value = qp.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,5);
-      $('#sJoin').onclick = () => join($('#sCode').value);
-      $('#sCode').addEventListener('keydown', e => { if(e.key === 'Enter') join($('#sCode').value); });
+      $('#sName').value = store.get('lesson-student-name') || '';
+      const go1 = () => join($('#sCode').value, $('#sName').value);
+      $('#sJoin').onclick = go1;
+      ['#sCode','#sName'].forEach(x => $(x).addEventListener('keydown', e => { if(e.key === 'Enter') go1(); }));
+      if($('#sCode').value) ($('#sName').value ? $('#sJoin') : $('#sName')).focus();
       return;
     }
     b.innerHTML = `<span class="room">Room ${esc(st.code)}</span>${st.name ? `<span class="sname">👤 ${esc(st.name)}</span>` : ''}<span class="sfollow" id="sFollow"></span><span class="score" id="sScore" hidden></span>`;
@@ -1043,7 +997,7 @@ const Student = (() => {
     return {right, marked};
   }
   function status(){
-    const f = $('#sFollow'); if(f) f.textContent = locked() ? '🔒 Following your teacher' : '🔓 Free to explore';
+    const f = $('#sFollow'); if(f) f.textContent = locked() ? '🔒 Following your teacher' : '';
     const sc = $('#sScore'); if(sc){ const {right, marked} = score(); sc.hidden = !marked; sc.textContent = `✓ ${right} / ${marked}`; }
   }
   function toast(){
@@ -1055,28 +1009,15 @@ const Student = (() => {
     if(i < 0 || i === cur){ t.hidden = true; return; }
     t.hidden = false;
     t.innerHTML = `<span>Your teacher opened a question</span><button class="btn primary">Go to it →</button>`;
-    $('button', t).onclick = () => { go(i, true); hostEl.scrollIntoView({block:'center'}); };
+    $('button', t).onclick = () => jumpTo(r.active);
   }
-  const schoolEmail = e => !!e && e.toLowerCase().endsWith('@' + SCHOOL_DOMAIN);
-  async function googleSignIn(){
-    const err = m => { const e = $('#sErr'); if(e) e.textContent = m; };
-    try{
-      const auth = firebase.auth(), prov = new firebase.auth.GoogleAuthProvider();
-      prov.setCustomParameters({hd: SCHOOL_DOMAIN, prompt: 'select_account'});
-      const cred = await auth.signInWithPopup(prov);
-      if(!schoolEmail(cred.user.email)){ await auth.signOut(); err(`Please use your school account (…@${SCHOOL_DOMAIN}).`); return; }
-      const c = st.pendingCode; st.pendingCode = ''; join(c);
-    }catch(e){ console.error(e);
-      err(/popup-blocked/.test(e.code||'') ? 'Your browser blocked the sign-in window. Allow pop-ups for this site and try again.'
-        : /popup-closed|cancelled-popup/.test(e.code||'') ? 'The sign-in window was closed. Try again.'
-        : /unauthorized-domain/.test(e.code||'') ? 'Sign-in is not set up for this website yet. Tell your teacher (authorised domains).'
-        : /admin_policy|access_denied|disallowed/i.test(String(e.message||'')) ? 'Your school account is not allowed to sign in to this app yet. Tell your teacher.'
-        : 'Sign-in did not work: ' + (e.message || e)); }
-  }
-  async function join(raw){
+  const cleanName = n => String(n||'').replace(/\s+/g,' ').trim().slice(0,40);
+  async function join(raw, rawName){
     const c = String(raw||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    const name = cleanName(rawName !== undefined ? rawName : store.get('lesson-student-name'));
     const err = m => { const e = $('#sErr'); if(e) e.textContent = m; };
     if(c.length !== 5){ err('The room code has 5 letters or numbers.'); return; }
+    if(name.length < 2){ err('Type your full name so your teacher knows who you are.'); const n = $('#sName'); if(n) n.focus(); return; }
     err(''); const btn = $('#sJoin'); if(btn){ btn.disabled = true; btn.textContent = 'Joining…'; }
     try{
       if(!firebase.apps.some(a => a.name === '[DEFAULT]')) firebase.initializeApp(FIREBASE_CONFIG);
@@ -1086,12 +1027,9 @@ const Student = (() => {
       st.db = firebase.database();
       const snap = await st.db.ref('rooms/'+c).get();
       if(!snap.exists()) throw new Error('Room not found. Check the code on the board.');
-      const needGoogle = snap.val().signin === 'google';
-      const u = auth.currentUser;
-      if(needGoogle && (u.isAnonymous || !schoolEmail(u.email))){ st.pendingCode = c; bar(); return; }
-      st.uid = u.uid;
-      await st.db.ref(`rooms/${c}/joined/${st.uid}`).set(needGoogle ? {name: String(u.displayName || u.email).slice(0,80), email: u.email} : true);
-      st.name = needGoogle ? String(u.displayName || u.email) : '';
+      st.uid = auth.currentUser.uid;
+      await st.db.ref(`rooms/${c}/joined/${st.uid}`).set({name});
+      st.name = name; store.set('lesson-student-name', name); st.lastJump = null;
       st.code = c; st.on = true; st.ended = false; st.sent = new Set();
       document.body.classList.add('joined');
       const ref = st.db.ref('rooms/'+c), cb = ref.on('value', s => onRoom(s.val()));
@@ -1111,7 +1049,16 @@ const Student = (() => {
     document.body.classList.toggle('locked', locked());
     if(locked() && r.stage){ const i = STAGES.findIndex(s => s.key === r.stage); if(i >= 0 && i !== cur) go(i, true); }
     Object.values(widgets).forEach(w => w.update());
+    /* when the teacher opens a question, take the student straight to it (once per opening) */
+    const key = r.open && r.active ? r.active + ':' + (r.openedAt || '') : '';
+    if(key && key !== st.lastJump){ st.lastJump = key; jumpTo(r.active); }
     status(); toast();
+  }
+  function jumpTo(id){
+    const hostEl = $(`[data-vote="${id}"]`), stg = hostEl && hostEl.closest('.stage'); if(!stg) return;
+    const i = STAGES.findIndex(s => 'st-' + s.key === stg.id);
+    if(i >= 0 && i !== cur) go(i, true);
+    setTimeout(() => { hostEl.scrollIntoView({block:'center', behavior:'smooth'}); hostEl.classList.remove('flash'); void hostEl.offsetWidth; hostEl.classList.add('flash'); }, 60);
   }
   function leave(ended){
     if(st.off) st.off(); st.off = null; st.on = false; st.room = null; st.ended = !!ended;
@@ -1178,9 +1125,21 @@ const Results = (() => {
     api.text = `${document.title} results (${new Date().toLocaleDateString()})\n` + (avg!==null?`Average correct: ${avg}% across ${nq} questions\n`:'') + lines.join('\n');
     return `<p class="small muted">Includes device answers and hand counts.</p>
       <p style="margin:8px 0"><span class="res-sum">${avg===null?'–':avg+'%'}</span> <span class="muted">average correct${nq?` across ${nq} question${nq>1?'s':''}`:''}</span></p>
-      ${rows}${acts}<div class="bar" style="margin-top:10px"><button class="btn" id="resCopy">Copy summary</button><span class="status" id="resMsg"></span></div>`;
+      ${rows}${acts}<div class="bar" style="margin-top:10px">${Live.on ? '<button class="btn mark" id="resTable">Copy student results</button>' : ''}<button class="btn" id="resCopy">Copy summary</button><span class="status" id="resMsg"></span></div>
+      ${Live.on ? '<p class="small muted">Student results: one row per student, ready to paste into Google Sheets or Excel. Copy them before you end the session.</p>' : ''}`;
   }
-  function bindCopy(){ const b = $('#resCopy'); if(b) b.onclick = async () => { try{ await navigator.clipboard.writeText(api.text); $('#resMsg').textContent = 'Copied.'; }catch(e){ $('#resMsg').textContent = 'Copy not allowed here. Select the text instead.'; } }; }
+  async function copyText(t, done){
+    try{ await navigator.clipboard.writeText(t); $('#resMsg').textContent = done; return; }catch(e){}
+    /* fallback: show the text selected so it can be copied with Ctrl+C */
+    let ta = $('#resFallback'); if(!ta){ ta = document.createElement('textarea'); ta.id = 'resFallback'; ta.className = 'resfallback'; ta.readOnly = true; $('#resBody').appendChild(ta); }
+    ta.value = t; ta.focus(); ta.select(); $('#resMsg').textContent = 'Press Ctrl+C (⌘+C on Mac) to copy the selected text.';
+  }
+  function bindCopy(){
+    const b = $('#resCopy'); if(b) b.onclick = () => copyText(api.text, 'Summary copied.');
+    const t = $('#resTable'); if(t) t.onclick = async () => { $('#resMsg').textContent = 'Preparing…';
+      try{ const r = await Live.tableText(); copyText(r.text, `Copied ${r.n} student${r.n===1?'':'s'}. Paste into a spreadsheet.`); }
+      catch(e){ console.error(e); $('#resMsg').textContent = 'Could not copy: ' + (e.message || e); } };
+  }
   let t = null;
   const api = { text:'',
     setStages(s){ STAGES = s; },
@@ -1256,7 +1215,7 @@ function shell(cfg){
     </div>
     ${STUDENT ? '<div class="sbar" id="sBar"></div>' : ''}
     <nav class="steps" id="steps" aria-label="Lesson stages"></nav>
-    ${STUDENT ? '<p class="sfollowbar">🔒 Your screen follows your teacher. Work on this page.</p>' : ''}
+    ${STUDENT ? '<p class="sfollowbar">🔒 Your screen follows your teacher for now.</p>' : ''}
   </div></div>
   ${STUDENT ? '<div class="stoast" id="sToast" hidden role="status"></div>' : ''}
 
@@ -1376,7 +1335,10 @@ function start(cfg){
   if(cfg.ready) cfg.ready();
   setLevel(cfg.level || 'core');
   go(0);
-  if(STUDENT){ Student.bar(); const r = new URLSearchParams(location.search).get('room'); if(r && window.firebase) Student.join(r); }
+  if(STUDENT){ Student.bar();
+    /* arriving from vote.html, where the student has just typed their name: join straight away */
+    const qs = new URLSearchParams(location.search), r = qs.get('room');
+    if(r && qs.has('join') && window.firebase && store.get('lesson-student-name')) Student.join(r); }
 }
 
 return { start, editor, codeTask, studentAsk, Student, ACTS, trace, parsons, gaps, annotate, sorter, askWidget, bugHunt, loopTrace, rangeExplorer,

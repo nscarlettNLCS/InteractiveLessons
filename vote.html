@@ -102,6 +102,7 @@ pre{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);bord
 #qModel{white-space:pre}
 .openlesson{margin:0;text-align:center}
 .openlesson a{display:inline-block;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 14px;color:var(--accent);font-weight:700;text-decoration:none}
+.namein{font-size:1.1rem;border:2px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface-2);width:100%}
 </style>
 </head>
 <body>
@@ -114,9 +115,11 @@ pre{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);bord
     <p class="ko">Type the room code on the board · 칠판에 있는 방 코드를 입력하세요</p>
     <label for="code">Room code</label>
     <input class="codein" id="code" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    <label for="sname">Your full name</label>
+    <input class="namein" id="sname" maxlength="40" autocomplete="name" spellcheck="false" placeholder="e.g. Minjun Kim">
     <button class="btn" id="joinBtn">Join</button>
     <p class="err" id="joinErr" aria-live="polite"></p>
-    <p class="small">No names are collected. Your answers are anonymous.</p>
+    <p class="small">Only your teacher sees your name. Your classmates don't.</p>
   </section>
 
   <section class="card" id="waiting" hidden>
@@ -171,7 +174,10 @@ if(!configured){ $('#joinErr').textContent = 'This has not been set up yet. Ask 
 
 async function join(){
   const c = $('#code').value.toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const name = $('#sname').value.replace(/\s+/g,' ').trim().slice(0,40);
   if(c.length !== 5){ $('#joinErr').textContent = 'The room code has 5 letters or numbers.'; return; }
+  if(name.length < 2){ $('#joinErr').textContent = 'Type your full name so your teacher knows who you are.'; $('#sname').focus(); return; }
+  try{ localStorage.setItem('lesson-student-name', name); }catch(e){}
   $('#joinErr').textContent = ''; $('#joinBtn').disabled = true; $('#joinBtn').textContent = 'Joining…';
   try{
     if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
@@ -185,12 +191,12 @@ async function join(){
     /* laptops go straight to the lesson in student view (it joins the room itself) */
     const pg = snap.val() && snap.val().page;
     if(typeof pg === 'string' && /^\/[\w\-\/.%]*\.html$/.test(pg)){
-      lessonURL = location.origin + pg + '?student&room=' + code;
+      lessonURL = location.origin + pg + '?student&room=' + code + '&join=1';
       const laptop = window.innerWidth >= 700 && (!window.matchMedia || matchMedia('(pointer: fine)').matches);
       if(laptop && !new URLSearchParams(location.search).has('stay')){ location.replace(lessonURL); return; }
       $('#openLesson').href = lessonURL; $('#openLessonBox').hidden = false;
     }
-    await db.ref(`rooms/${code}/joined/${uid}`).set(true);
+    await db.ref(`rooms/${code}/joined/${uid}`).set({name});
     $('#roomTag').textContent = 'Room ' + code; $('#roomTag').hidden = false;
     const ref = db.ref('rooms/'+code);
     const cb = ref.on('value', s => { room = s.val(); render(); });
@@ -203,6 +209,8 @@ async function join(){
   }
 }
 $('#joinBtn').onclick = join;
+try{ $('#sname').value = localStorage.getItem('lesson-student-name') || ''; }catch(e){}
+$('#sname').addEventListener('keydown', e => { if(e.key === 'Enter') join(); });
 $('#code').addEventListener('keydown', e => { if(e.key === 'Enter') join(); });
 
 function myScore(){

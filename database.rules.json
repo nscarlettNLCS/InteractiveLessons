@@ -7,7 +7,7 @@
         "joined": {
           "$uid": {
             ".write": "auth != null && auth.uid === $uid && root.child('rooms').child($code).child('owner').exists()",
-            ".validate": "newData.isBoolean()"
+            ".validate": "newData.isBoolean() || (newData.hasChildren(['name']) && newData.child('name').isString() && newData.child('name').val().length >= 1 && newData.child('name').val().length <= 40)"
           }
         },
         "votes": {
@@ -30,6 +30,14 @@
               "$other": {
                 ".validate": false
               }
+            }
+          }
+        },
+        "done": {
+          "$a": {
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && root.child('rooms').child($code).child('owner').exists()",
+              ".validate": "newData.isBoolean()"
             }
           }
         }
