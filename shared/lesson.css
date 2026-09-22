@@ -500,3 +500,16 @@ html, body, code, pre, kbd, samp, textarea, input, button, .code, .gapcode, .out
 .flash{animation:qflash 1.2s ease 2}
 @media (prefers-reduced-motion:reduce){.flash{animation:none;outline:4px solid var(--mark)}}
 .resfallback{width:100%;min-height:8em;margin-top:8px;font-family:var(--mono);font-size:.8rem;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);color:var(--ink)}
+
+/* ---- menu bar: student count, red lock button, name picker ---- */
+.tcount{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--good-soft);color:var(--good);border-radius:10px;padding:6px 11px;font-size:.85rem;font-weight:700}
+.tcount b{font-variant-numeric:tabular-nums}
+.lockbtn{background:#C62828!important;color:#fff!important;border-color:#C62828!important;font-weight:700}
+.lockbtn:hover{background:#A61F1F!important}
+.lockbtn[aria-pressed="true"]{background:#8E1414!important;border-color:#8E1414!important;box-shadow:0 0 0 3px var(--surface),0 0 0 5px #C62828;animation:lockpulse 1.6s ease-in-out infinite}
+@keyframes lockpulse{50%{box-shadow:0 0 0 3px var(--surface),0 0 0 7px rgba(198,40,40,.45)}}
+@media (prefers-reduced-motion:reduce){.lockbtn[aria-pressed="true"]{animation:none}}
+.picker.names{font-size:clamp(1.8rem,5vw,3rem);line-height:1.15;text-align:center;overflow-wrap:anywhere}
+.picklist{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px;max-height:40vh;overflow:auto}
+.picklist span{border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:.85rem;background:var(--surface)}
+.picklist span.done{background:var(--surface-2);color:var(--muted);text-decoration:line-through}

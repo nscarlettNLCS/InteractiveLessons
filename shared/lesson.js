@@ -862,12 +862,24 @@ const Live = (() => {
     panel(); dockLabel();
   }
   function pills(){ $$('.donepill').forEach(p => { p.hidden = !st.on; $('b', p).textContent = st.done[p.dataset.for] || 0; }); }
-  function follow(on){ st.follow = !!on; upd({follow: st.follow, stage: STAGES[cur] ? STAGES[cur].key : ''}); }
+  function follow(on){ st.follow = !!on; upd({follow: st.follow, stage: STAGES[cur] ? STAGES[cur].key : ''}); bar(); }
+  /* menu bar: student count and the red lock button */
+  function bar(){
+    const c = $('#tCount'); if(c){ c.hidden = !st.on; $('b', c).textContent = st.joined; }
+    [['#lockBtn', '🔒 Lock screens', '🔒 Screens locked'], ['#dLock', '🔒 Lock', '🔒 Locked']].forEach(([id, off, on]) => { const b = $(id); if(!b) return;
+      b.hidden = !st.on; b.setAttribute('aria-pressed', st.follow); b.textContent = st.follow ? on : off;
+      b.title = st.follow ? 'Students\' screens follow yours. Click to let them move freely.' : 'Make every student\'s screen follow yours'; });
+    const t = $('#followTog'); if(t) t.checked = st.follow;
+    document.body.classList.toggle('locking', st.on && st.follow);
+  }
   const states = () => Object.keys(WIDGETS).forEach(q => WIDGETS[q].setState(st.active, st.open));
-  const dockLabel = () => { $('#dLive').textContent = st.on ? `Room ${st.code} · ${st.joined}` : ''; };
+  const dockLabel = () => { $('#dLive').textContent = st.on ? `Room ${st.code} · 👥 ${st.joined}` : ''; bar();
+    if(window.__drawPicker && !$('#picker').hidden) window.__drawPicker(); };
   const upd = obj => st.on ? st.db.ref('rooms/'+st.code).update(obj).catch(e => console.error(e)) : Promise.resolve();
   return {
     panel, get on(){ return st.on; }, get joined(){ return st.joined; }, get done(){ return st.done; },
+    get follow(){ return st.follow; }, setFollow(on){ if(st.on) follow(on); },
+    names(){ return [...new Set(Object.values(st.names).map(n => String(n||'').trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b)); },
     sessionData, tableText, get cls(){ return clsId(); },
     stage(key){ if(st.on) upd({stage:key}); },
     open(id, q){ if(!st.on){ togglePanel(true); return; } st.active = id; st.open = true; states(); upd({active:id, open:true, reveal:-1, revealed:false, question:q, openedAt: Date.now()}); },
@@ -1208,6 +1220,8 @@ function shell(cfg){
         <button class="tbtn" id="notesBtn" aria-pressed="false">Teacher notes</button>
         <button class="tbtn" id="resBtn" aria-pressed="false">Results</button>
         <button class="tbtn live-btn" id="liveBtn" aria-pressed="false">Live answers</button>
+        <span class="tcount" id="tCount" hidden title="Students in the room">👥 <b>0</b> joined</span>
+        <button class="tbtn lockbtn" id="lockBtn" aria-pressed="false" hidden>🔒 Lock screens</button>
         <button class="tbtn" id="aMinus" aria-label="Smaller text">A−</button>
         <button class="tbtn" id="aPlus" aria-label="Larger text">A+</button>
         <button class="tbtn present-btn" id="presentBtn" title="Present mode (P)">⛶ Present</button>
@@ -1224,12 +1238,13 @@ function shell(cfg){
     <dl class="gl">${glossary}</dl>
   </aside>
   <aside class="drawer" id="picker" hidden aria-label="Pick a student">
-    <div class="bar" style="justify-content:space-between;margin-bottom:6px"><h3>Pick a student number</h3><button class="tbtn" data-close="picker">Close</button></div>
-    <div class="picker" id="pickNum">–</div>
-    <div class="bar" style="justify-content:center"><label class="small" for="classSize">Class size</label>
-      <input id="classSize" type="number" min="2" max="40" value="24" style="width:4.5em;border:1px solid var(--line);border-radius:8px;padding:4px 6px;background:var(--surface-2)">
-      <button class="btn primary" id="pickGo">Pick</button></div>
-    <p class="small muted" style="text-align:center;margin-top:8px">Numbers aren't picked again until everyone has had a turn.</p>
+    <div class="bar" style="justify-content:space-between;margin-bottom:6px"><h3 id="pickTitle">Pick a student</h3><button class="tbtn" data-close="picker">Close</button></div>
+    <div class="picker" id="pickNum" aria-live="polite">–</div>
+    <div class="bar" style="justify-content:center"><span id="pickSize"><label class="small" for="classSize">Class size</label>
+      <input id="classSize" type="number" min="2" max="40" value="24" style="width:4.5em;border:1px solid var(--line);border-radius:8px;padding:4px 6px;background:var(--surface-2)"></span>
+      <button class="btn primary" id="pickGo">Pick</button><button class="btn" id="pickReset">Start again</button></div>
+    <p class="small muted" id="pickNote" style="text-align:center;margin-top:8px"></p>
+    <div class="picklist" id="pickList"></div>
   </aside>
   <aside class="drawer" id="resPanel" hidden aria-label="Lesson results">
     <div class="bar" style="justify-content:space-between;margin-bottom:6px"><h3>Lesson results</h3><button class="tbtn" data-close="resPanel">Close</button></div>
@@ -1247,7 +1262,7 @@ function shell(cfg){
     <span class="sep"></span>
     <output id="dTime">3:00</output><button class="dbtn" id="dGo" aria-label="Start or pause timer">▶</button>
     <button class="dbtn" id="dGloss">Key words</button><button class="dbtn" id="dPick">Pick</button><button class="dbtn" id="dRes">Results</button><button class="dbtn" id="dA" aria-label="Larger text">A+</button>
-    <button class="dbtn dlive" id="dLive" aria-label="Show room code"></button>
+    <button class="dbtn dlive" id="dLive" aria-label="Show room code"></button><button class="dbtn lockbtn" id="dLock" aria-pressed="false" hidden>🔒 Lock</button>
     <span class="sep"></span><button class="dbtn" id="dExit">Exit (Esc)</button>
   </div>
   <main class="wrap" id="main"></main>`);
@@ -1295,13 +1310,37 @@ function shell(cfg){
   $('#dLive').onclick = () => toggleDrawer('livePanel', $('#liveBtn'));
   $$('[data-close]').forEach(b => b.onclick = () => { $('#'+b.dataset.close).hidden = true; ['#glossBtn','#pickBtn','#resBtn','#liveBtn'].forEach(x => $(x).setAttribute('aria-pressed', false)); });
 
-  let used = [];
-  $('#pickGo').onclick = () => { const n = Math.max(2, Math.min(40, +$('#classSize').value || 24));
+  /* Pick a student: names of students in the live room, otherwise numbers */
+  let used = [], usedNames = [];
+  const roomNames = () => Live.on ? Live.names() : [];
+  function drawPicker(){
+    const names = roomNames(), byName = names.length > 0;
+    $('#pickTitle').textContent = byName ? 'Pick a student' : 'Pick a student number';
+    $('#pickSize').hidden = byName;
+    usedNames = usedNames.filter(n => names.includes(n));
+    $('#pickNote').textContent = byName ? `${usedNames.length} of ${names.length} picked. Nobody is picked twice until everyone has had a turn.`
+      : (Live.on ? 'No students have joined yet, so numbers are used.' : 'Numbers aren\'t picked again until everyone has had a turn. Start a live session to pick from students\' names.');
+    $('#pickList').innerHTML = byName ? names.map(n => `<span class="${usedNames.includes(n) ? 'done' : ''}">${usedNames.includes(n) ? '✓ ' : ''}${esc(n)}</span>`).join('') : '';
+  }
+  const spinTo = (vals, pick) => { let k = 0; const e = $('#pickNum'); e.classList.toggle('names', typeof pick === 'string');
+    const spin = setInterval(() => { e.textContent = vals[Math.floor(Math.random()*vals.length)]; if(++k > 12){ clearInterval(spin); e.textContent = pick; drawPicker(); } }, 50); };
+  $('#pickGo').onclick = () => {
+    const names = roomNames();
+    if(names.length){
+      let pool = names.filter(n => !usedNames.includes(n));
+      if(!pool.length){ usedNames = []; pool = names.slice(); }
+      const pick = pool[Math.floor(Math.random()*pool.length)]; usedNames.push(pick); spinTo(names, pick); return; }
+    const n = Math.max(2, Math.min(40, +$('#classSize').value || 24));
     let pool = []; for(let i=1;i<=n;i++) if(!used.includes(i)) pool.push(i);
     if(!pool.length){ used = []; pool = Array.from({length:n},(_,i)=>i+1); }
     const pick = pool[Math.floor(Math.random()*pool.length)]; used.push(pick);
-    let k = 0; const e = $('#pickNum'); const spin = setInterval(() => { e.textContent = 1 + Math.floor(Math.random()*n); if(++k > 10){ clearInterval(spin); e.textContent = pick; } }, 45); };
+    spinTo(Array.from({length:n},(_,i)=>i+1), pick); };
+  $('#pickReset').onclick = () => { used = []; usedNames = []; $('#pickNum').textContent = '–'; drawPicker(); };
   $('#classSize').onchange = () => { used = []; };
+  window.__drawPicker = drawPicker;
+  $('#pickBtn').addEventListener('click', drawPicker); $('#dPick').addEventListener('click', drawPicker);
+  $('#lockBtn').onclick = () => Live.setFollow(!Live.follow);
+  $('#dLock').onclick = () => Live.setFollow(!Live.follow);
   $('#notesBtn').onclick = () => { const on = document.body.classList.toggle('show-notes'); $('#notesBtn').setAttribute('aria-pressed', on); };
   let fs = 17;
   $('#aPlus').onclick = () => { fs = Math.min(26, fs+1); document.documentElement.style.setProperty('--fs', fs+'px'); };
