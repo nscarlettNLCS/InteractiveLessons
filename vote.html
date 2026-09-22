@@ -100,12 +100,15 @@ pre{background:var(--code-bg);color:var(--code-ink);font-family:var(--mono);bord
 .tests li.fail{background:var(--bad-soft);color:var(--bad)}
 .hintbox{background:var(--mark-soft);border-radius:10px;padding:8px 12px}
 #qModel{white-space:pre}
+.openlesson{margin:0;text-align:center}
+.openlesson a{display:inline-block;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 14px;color:var(--accent);font-weight:700;text-decoration:none}
 </style>
 </head>
 <body>
 <div class="wrap" id="wrap">
   <header><b>Class answers</b><span class="hdr"><span class="score" id="scoreTag" hidden></span><span class="room" id="roomTag" hidden></span></span></header>
 
+  <p class="openlesson" id="openLessonBox" hidden><a id="openLesson" href="#">💻 On a laptop? Open the full lesson →</a></p>
   <section class="card" id="join">
     <h1>Join your class</h1>
     <p class="ko">Type the room code on the board · 칠판에 있는 방 코드를 입력하세요</p>
@@ -159,7 +162,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const show = id => ['join','waiting','question','ended'].forEach(x => $('#'+x).hidden = x !== id);
 const norm = (t, mono) => { const s = String(t).trim().toLowerCase().replace(/\s+/g,' '); return mono ? s.replace(/\s+/g,'') : s; };
-let db, uid, code = '', room = null, pending = {}, off = null, typedDraft = null;
+let lessonURL = '', db, uid, code = '', room = null, pending = {}, off = null, typedDraft = null;
 
 const configured = !!(window.firebase && window.FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey && !/PASTE/i.test(FIREBASE_CONFIG.apiKey) && FIREBASE_CONFIG.databaseURL);
 const qp = new URLSearchParams(location.search).get('room');
@@ -172,16 +175,28 @@ async function join(){
   $('#joinErr').textContent = ''; $('#joinBtn').disabled = true; $('#joinBtn').textContent = 'Joining…';
   try{
     if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-    const cred = await firebase.auth().signInAnonymously(); uid = cred.user.uid; db = firebase.database();
+    const auth = firebase.auth();
+    if(auth.authStateReady) await auth.authStateReady();
+    if(!auth.currentUser) await auth.signInAnonymously();
+    uid = auth.currentUser.uid; db = firebase.database();
     const snap = await db.ref('rooms/'+c).get();
     if(!snap.exists()) throw new Error('Room not found. Check the code on the board.');
     code = c;
+    /* laptops go straight to the lesson in student view (it joins the room itself) */
+    const pg = snap.val() && snap.val().page;
+    if(typeof pg === 'string' && /^\/[\w\-\/.%]*\.html$/.test(pg)){
+      lessonURL = location.origin + pg + '?student&room=' + code;
+      const laptop = window.innerWidth >= 700 && (!window.matchMedia || matchMedia('(pointer: fine)').matches);
+      if(laptop && !new URLSearchParams(location.search).has('stay')){ location.replace(lessonURL); return; }
+      $('#openLesson').href = lessonURL; $('#openLessonBox').hidden = false;
+    }
     await db.ref(`rooms/${code}/joined/${uid}`).set(true);
     $('#roomTag').textContent = 'Room ' + code; $('#roomTag').hidden = false;
     const ref = db.ref('rooms/'+code);
     const cb = ref.on('value', s => { room = s.val(); render(); });
     off = () => ref.off('value', cb);
     history.replaceState(null, '', '?room='+code);
+
   }catch(e){
     $('#joinErr').textContent = (e.message && !/permission/i.test(e.message)) ? e.message : 'Could not join. Check the code and try again.';
     $('#joinBtn').disabled = false; $('#joinBtn').textContent = 'Join';

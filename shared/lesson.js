@@ -103,9 +103,26 @@ function outCheck(printed, t){
 const testCode = tests => '\n\n' + tests.map(t =>
   `try:\n    __ok = bool(${t.expr})\nexcept Exception:\n    __ok = False\nprint("${TEST}${t.label.replace(/"/g,'\\"')}\u00a7" + str(__ok))`).join('\n');
 
+/* ---------------- activity tracking (auto check-ins from student laptops) ---------------- */
+const ACTS = {};
+const KIND = {code:'Code challenge', parsons:'Parsons problem', gaps:'Fill the gaps', annotate:'Annotate the code', sorter:'Sort it', bug:'Spot the bugs', fix:'Fix the bugs'};
+function track(h, kind){
+  const stg = h && h.closest ? h.closest('.stage') : null; if(!stg) return null;
+  if(h.dataset.act && ACTS[h.dataset.act]) return h.dataset.act;
+  const key = stg.id.replace(/^st-/,''), id = key + '-' + $$('[data-act]', stg).length;
+  h.dataset.act = id;
+  const lv = h.closest('[data-show]');
+  ACTS[id] = {id, kind, stage:key, level: lv ? lv.dataset.show : ''};
+  const pill = el(`<div class="donepill" data-for="${id}" hidden><span>✓ <b>0</b> finished on laptops</span></div>`);
+  h.parentNode.insertBefore(pill, h);
+  return id;
+}
+function done(id){ if(id && STUDENT) Student.done(id); }
+
 /* ---------------- code editor ---------------- */
 function editor(sel, start, opts){
   const h = host(sel); opts = opts || {};
+  const act = (opts.tests && !opts.noTrack) ? track(h, opts.kind || 'code') : null;
   h.innerHTML = `
     <div class="editor"><div class="gutter" aria-hidden="true"></div><textarea spellcheck="false" autocapitalize="off" autocomplete="off"${opts.id?` id="${opts.id}"`:''} aria-label="Python code editor"></textarea></div>
     ${opts.inputs !== undefined ? `<label class="inbox"><span>⌨ Inputs <small>typed in order, separated by commas</small></span><input class="inputs" value="${esc(opts.inputs)}" spellcheck="false" autocomplete="off"></label>` : ''}
@@ -130,7 +147,7 @@ function editor(sel, start, opts){
     const r = await runPython(ta.value + (exprT.length ? testCode(exprT) : ''), inputList());
     let res = showResult(pre, r); st.textContent = '';
     if(t){ const ul = $('.tests', h);
-      if(!r.ok && !t.some(x => x.inputs)){ ul.innerHTML = '<li class="fail">Fix the error first, then check again.</li>'; return; }
+      if(!r.ok && !t.some(x => x.inputs)){ ul.innerHTML = '<li class="fail">Fix the error first, then check again.</li>'; return t.map(x => ({name:x.label, pass:false})); }
       const printed = outText(r.out);
       for(const x of t.filter(x => !x.expr)){
         if(x.inputs){ st.textContent = 'Checking…'; const rr = await runPython(ta.value, x.inputs);
@@ -139,13 +156,15 @@ function editor(sel, start, opts){
       }
       st.textContent = '';
       ul.innerHTML = res.map(x => `<li class="${x.pass?'pass':'fail'}">${x.pass?'✓':'✗'} ${esc(x.name)}</li>`).join('');
-      if(res.length && res.every(x => x.pass)) ul.insertAdjacentHTML('beforeend', '<li class="pass">All tests passed.</li>');
+      if(res.length && res.every(x => x.pass)){ ul.insertAdjacentHTML('beforeend', `<li class="pass">${esc(opts.passMsg || 'All tests passed.')}</li>`); done(act); }
+      return res;
     }
+    return [];
   };
   $('.run', h).onclick = () => go(false);
   if(opts.tests) $('.check', h).onclick = () => go(true);
   $('.reset', h).onclick = () => { ta.value = original; sync(); pre.textContent = ''; const ul = $('.tests', h); if(ul) ul.innerHTML = ''; };
-  return { set(code){ original = code; ta.value = code; sync(); pre.textContent=''; const ul = $('.tests', h); if(ul) ul.innerHTML=''; }, get value(){ return ta.value; } };
+  return { set(code){ original = code; ta.value = code; sync(); pre.textContent=''; const ul = $('.tests', h); if(ul) ul.innerHTML=''; }, get value(){ return ta.value; }, check: () => go(true), textarea: ta };
 }
 
 /* ---------------- ask widget: choice / check-in / typed ---------------- */
@@ -267,7 +286,7 @@ function codeTask(sel, id, q){
     <div class="accepted cmodel" hidden></div>
     <div class="bar"><button class="btn mark reveal">${q.model ? 'Show results + model answer' : 'Show results'}</button><button class="btn peek">Peek</button><button class="btn resetv">Clear programs</button><span class="pct"></span></div>
     <div class="livebar"><button class="btn primary lopen">Open on laptops</button><button class="btn lclose">Close</button><span class="pill closed lstate">Not open</span><span class="small muted"><span class="count lcount">0</span> programs sent</span></div>`;
-  if(q.starter !== undefined) editor($('.cted', h), q.starter, {inputs: q.inputs, tests: marked ? () => tests : null});
+  if(q.starter !== undefined) editor($('.cted', h), q.starter, {inputs: q.inputs, tests: marked ? () => tests : null, noTrack:true});
   let subs = {}, revealed = false, peek = false, filter = 'all', order = [];
   const passed = x => x && x.of > 0 && x.pass === x.of;
   function draw(){
@@ -377,7 +396,7 @@ function trace(sel, cfg){
 
 /* ---------------- parsons ---------------- */
 function parsons(sel, cfg){
-  const h = host(sel);
+  const h = host(sel); const act = track(h, 'parsons');
   h.innerHTML = `
     <div class="parsons">
       <div class="zone bankz" aria-label="Line bank"><h3>Line bank</h3></div>
@@ -427,7 +446,7 @@ function parsons(sel, cfg){
       else if(l.id === want){ e.classList.add('indent-bad'); indBad++; }
       else e.classList.add('bad'); });
     const n = cfg.order.length, fb = $('.pfb', h);
-    if(right === n && state.prog.length === n) fb.innerHTML = '<div class="feedback good">Correct! Now run it to see the output.</div>';
+    if(right === n && state.prog.length === n) { fb.innerHTML = '<div class="feedback good">Correct! Now run it to see the output.</div>'; done(act); }
     else if(state.prog.length < n) fb.innerHTML = `<div class="feedback mid">${right} of ${n} lines are correct so far. Keep adding lines.</div>`;
     else fb.innerHTML = `<div class="feedback ${right>=3?'mid':'bad'}">${right} of ${n} lines are in the right place${indBad?` · ${indBad} ${indBad>1?'lines need':'line needs'} the indentation fixing (amber)`:''}${state.prog.length>n?' · there are extra lines in your program':''}.</div>`;
   };
@@ -438,7 +457,7 @@ function parsons(sel, cfg){
 
 /* ---------------- fill the gaps ---------------- */
 function gaps(sel, cfg){
-  const h = host(sel);
+  const h = host(sel); const act = track(h, 'gaps');
   const rendered = cfg.template.split('\n').map(line => {
     let out = hl(line);
     cfg.gaps.forEach((g,i) => { out = out.replace(`__G${i}__`, `<input data-g="${i}" aria-label="Gap ${i+1}" autocomplete="off" autocapitalize="off" spellcheck="false">`); });
@@ -457,7 +476,7 @@ function gaps(sel, cfg){
   $$('.word', h).forEach(b => b.onclick = () => { const t = selected || ins.find(x => !x.value); if(!t) return; t.value = b.dataset.w; t.classList.remove('ok','bad'); const nx = ins.find(x => !x.value); if(nx) nx.focus(); });
   $('.gcheck', h).onclick = () => { let r = 0;
     ins.forEach((inp,i) => { const ok = inp.value.trim() === cfg.gaps[i].a; inp.classList.toggle('ok', ok); inp.classList.toggle('bad', !ok); if(ok) r++; });
-    $('.gfb', h).innerHTML = `<div class="feedback ${r===ins.length?'good':r>=ins.length/2?'mid':'bad'}">${r} of ${ins.length} correct${r===ins.length?'. Now run it!':'. Red gaps need another look.'}</div>`; };
+    $('.gfb', h).innerHTML = `<div class="feedback ${r===ins.length?'good':r>=ins.length/2?'mid':'bad'}">${r} of ${ins.length} correct${r===ins.length?'. Now run it!':'. Red gaps need another look.'}</div>`; if(r === ins.length) done(act); };
   $('.ghint', h).onclick = () => { const i = ins.findIndex((inp,k) => inp.value.trim() !== cfg.gaps[k].a);
     $('.gfb', h).innerHTML = i < 0 ? '<div class="feedback good">All the gaps are correct.</div>' : `<div class="feedback mid">Gap ${i+1}: ${esc(cfg.gaps[i].hint)}</div>`; };
   $('.gclear', h).onclick = () => { ins.forEach(x => { x.value=''; x.classList.remove('ok','bad'); }); $('.gfb', h).innerHTML=''; $('.gout', h).hidden = true; };
@@ -467,12 +486,12 @@ function gaps(sel, cfg){
 
 /* ---------------- annotate ---------------- */
 function annotate(sel, cfg){
-  const h = host(sel);
+  const h = host(sel); const act = track(h, 'annotate'); let revealing = false;
   h.innerHTML = `
     <div class="annot">
       <div class="panel"><h3>The code</h3><div class="alist arows"></div></div>
       <div class="panel"><h3>Annotations</h3><div class="alist abank"></div>
-        <div class="bar"><button class="btn mark acheck">✓ Check</button><button class="btn areveal">Reveal answers</button><button class="btn areset">Start again</button></div>
+        <div class="bar"><button class="btn mark acheck">✓ Check</button><button class="btn areveal tonly">Reveal answers</button><button class="btn areset">Start again</button></div>
         <div class="afb" aria-live="polite"></div>
       </div>
     </div>`;
@@ -508,15 +527,15 @@ function annotate(sel, cfg){
     $$('.arows .aslot', h).forEach(b => { const n = +b.dataset.line; if(st.given.includes(n)) return; t++;
       const c = st.slots[n]; b.classList.remove('ok','bad'); if(!c) return; if(c.line === n){ b.classList.add('ok'); r++; } else b.classList.add('bad'); });
     const left = st.bank.filter(c => c.line).length;
-    $('.afb', h).innerHTML = `<div class="feedback ${r===t?'good':r>=t/2?'mid':'bad'}">${r} of ${t} correct${r===t?'. Well done!':left?'. Some annotations still need placing.':'. The red ones need to be swapped.'}</div>`; };
-  $('.areveal', h).onclick = () => { st.bank = st.all.filter(c => !c.line); st.slots = {}; st.all.filter(c => c.line).forEach(c => st.slots[c.line] = c); st.sel = null; draw(); $('.acheck', h).click(); };
+    $('.afb', h).innerHTML = `<div class="feedback ${r===t?'good':r>=t/2?'mid':'bad'}">${r} of ${t} correct${r===t?'. Well done!':left?'. Some annotations still need placing.':'. The red ones need to be swapped.'}</div>`; if(r === t && !revealing) done(act); };
+  $('.areveal', h).onclick = () => { st.bank = st.all.filter(c => !c.line); st.slots = {}; st.all.filter(c => c.line).forEach(c => st.slots[c.line] = c); st.sel = null; draw(); revealing = true; $('.acheck', h).click(); revealing = false; };
   $('.areset', h).onclick = setup;
   onLevel(setup); setup();
 }
 
 /* ---------------- sorter (two categories) ---------------- */
 function sorter(sel, cfg){
-  const h = host(sel);
+  const h = host(sel); const act = track(h, 'sorter');
   h.innerHTML = `<div class="srows"></div>
     <div class="bar" style="margin-top:8px"><button class="btn mark scheck">✓ Check</button><button class="btn sreset">Start again</button></div>
     <div class="sfb" aria-live="polite"></div>`;
@@ -532,7 +551,7 @@ function sorter(sel, cfg){
       if(!p){ $('.why', row).textContent = 'Choose an answer.'; return; }
       const ok = p.dataset.s === it.cat; row.classList.add(ok ? 'ok' : 'bad'); if(ok) r++;
       $('.why', row).textContent = ok ? it.why : (cfg.wrongHint || 'Not quite. Look at where it is created.'); });
-    $('.sfb', h).innerHTML = `<div class="feedback ${r===n?'good':r>=n/2?'mid':'bad'}">${r} of ${n} correct${r===n?'!':''}</div>`; };
+    $('.sfb', h).innerHTML = `<div class="feedback ${r===n?'good':r>=n/2?'mid':'bad'}">${r} of ${n} correct${r===n?'!':''}</div>`; if(r === n && n) done(act); };
   $('.sreset', h).onclick = setup;
   onLevel(setup); setup();
 }
@@ -540,12 +559,12 @@ function sorter(sel, cfg){
 /* ---------------- bug hunt ---------------- */
 /* cfg: {code, bugs:[{line, what}], tests:[{label, output|contains}], fixed} */
 function bugHunt(sel, cfg){
-  const h = host(sel);
+  const h = host(sel); const act = track(h, 'bug');
   const lines = cfg.code.split('\n');
   h.innerHTML = `
     <p class="small"><b>1.</b> Tap every line you think has a mistake. <b>2.</b> Press <b>Check</b>. <b>3.</b> Fix the code below and run it.</p>
     <div class="code bugcode">${lines.map((l,i)=>`<button class="ln bugln" data-l="${i+1}" aria-pressed="false"><i>${i+1}</i><span>${hl(l)||' '}</span><em class="flag" aria-hidden="true"></em></button>`).join('')}</div>
-    <div class="bar"><button class="btn mark bcheck">✓ Check</button><button class="btn breveal">Show the bugs</button><button class="btn breset">Clear</button><span class="status bcount"></span></div>
+    <div class="bar"><button class="btn mark bcheck">✓ Check</button><button class="btn breveal tonly">Show the bugs</button><button class="btn breset">Clear</button><span class="status bcount"></span></div>
     <div class="bfb" aria-live="polite"></div>
     <div class="bfix"></div>`;
   const bugLines = cfg.bugs.map(b => b.line);
@@ -562,12 +581,13 @@ function bugHunt(sel, cfg){
       .map(b => `<li><b>Line ${b.line}:</b> ${b.what}</li>`).join('');
     $('.bfb', h).innerHTML = (reveal ? '' : `<div class="feedback ${found===cfg.bugs.length&&!wrong?'good':found?'mid':'bad'}">You found ${found} of ${cfg.bugs.length} bugs${wrong?` · ${wrong} line${wrong>1?'s were':' was'} fine (grey)`:''}${found<cfg.bugs.length?'. Keep looking!':'!'}</div>`)
       + (list ? `<ul class="buglist">${list}</ul>` : '');
+    if(!reveal && found === cfg.bugs.length && !wrong) done(act);
   }
   $('.bcheck', h).onclick = () => mark(false);
   $('.breveal', h).onclick = () => mark(true);
   $('.breset', h).onclick = () => { $$('.bugln', h).forEach(b => { b.setAttribute('aria-pressed', false); b.classList.remove('found','missed','wrongflag'); }); $('.bfb', h).innerHTML=''; count(); };
   count();
-  editor($('.bfix', h), cfg.code, {id: cfg.id, tests: cfg.tests ? () => cfg.tests : null});
+  editor($('.bfix', h), cfg.code, {id: cfg.id, tests: cfg.tests ? () => cfg.tests : null, kind:'fix'});
 }
 
 /* ---------------- loop trace table ---------------- */
@@ -663,34 +683,108 @@ function rangeExplorer(sel, cfg){
 }
 
 /* ---------------- live session (Firebase) ---------------- */
+/* Classes: Years 5-9 A-H, Years 10-11 A-D, Years 12 and 13 IB */
+const YEARS = [5,6,7,8,9,10,11,12,13];
+const classLetters = y => y <= 9 ? 'ABCDEFGH'.split('') : y <= 11 ? 'ABCD'.split('') : ['IB'];
+const yearLabel = y => y >= 12 ? `Year ${y} IB` : `Year ${y}`;
+const SCHOOL_DOMAIN = window.SCHOOL_DOMAIN || 'nlcsjeju.kr';
+const store = { get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k, v){ try{ if(v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); }catch(e){} } };
+const safeCell = v => (typeof v === 'string' && /^[=+\-@]/.test(v)) ? "'" + v : v;
+
 const Live = (() => {
-  const st = {on:false, code:'', db:null, uid:'', active:'', open:false, joined:0, refs:[]};
+  const st = {on:false, code:'', db:null, uid:'', active:'', open:false, joined:0, names:{}, refs:[], follow:true, done:{},
+    cls: null, signin: store.get('lesson-signin') === 'google', saved:null, saving:false, msg:''};
   const cfgOK = () => !!(window.firebase && window.FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey && !/PASTE/i.test(FIREBASE_CONFIG.apiKey) && FIREBASE_CONFIG.databaseURL);
   const body = () => $('#liveBody');
   const joinURL = () => new URL(ROOT.replace(/\/?$/, '/') + 'vote.html', location.href).href.split(/[?#]/)[0] + '?room=' + st.code;
+  const studentURL = () => location.origin + location.pathname + '?student&room=' + st.code;
+  const shortURL = () => joinURL().replace(/^https?:\/\//, '').split('?')[0];
+  const sheetsURL = () => store.get('lesson-sheets-url') || '';
+  const lessonYear = () => { const m = location.pathname.match(/\/y(\d+)\//i); return m ? +m[1] : null; };
+  /* default class: last used if it is in this lesson's year, otherwise just the year */
+  (function(){ const last = store.get('lesson-last-class'), ly = lessonYear();
+    const m = last && last.match(/^(\d+)(.+)$/);
+    if(m && (!ly || +m[1] === ly)) st.cls = {y:+m[1], l:m[2]};
+    else st.cls = ly ? {y:ly, l:''} : {y:7, l:''}; })();
+  const clsId = () => st.cls && st.cls.l && st.cls.l !== 'none' ? `${st.cls.y}${st.cls.l}` : '';
+
+  function classPicker(){
+    const y = st.cls.y, letters = classLetters(y);
+    return `<div class="clspick"><div class="clsrow"><label for="clsYear"><b>Class</b></label>
+        <select id="clsYear">${YEARS.map(v => `<option value="${v}"${v===y?' selected':''}>${yearLabel(v)}</option>`).join('')}</select></div>
+      <div class="clsbtns" role="group" aria-label="Class">${letters.map(l => `<button data-l="${l}" aria-pressed="${st.cls.l===l}">${y>=12?`${y} IB`:`${y}${l}`}</button>`).join('')}<button data-l="none" class="none" aria-pressed="${st.cls.l==='none'}">No class (don't save)</button></div></div>`;
+  }
+  function bindPicker(){
+    $('#clsYear').onchange = e => { st.cls = {y:+e.target.value, l: classLetters(+e.target.value).length === 1 ? 'IB' : ''}; afterCls(); };
+    $$('.clsbtns button').forEach(b => b.onclick = () => { st.cls.l = b.dataset.l; afterCls(); });
+  }
+  function afterCls(){ if(clsId()) store.set('lesson-last-class', clsId()); if(st.on) upd({cls: clsId()}); st.saved = null; panel(); }
+  function sheetSetup(){
+    const u = sheetsURL();
+    return `<details class="sheetset"${u?'':' open'}><summary>${u ? '✓ Saving to Google Sheets is set up' : 'Set up saving to Google Sheets'}</summary>
+      <p class="small muted">Paste the web app link from your Apps Script (see SHEETS-SETUP.md). It is kept on this computer only.</p>
+      <div class="bar"><input id="sheetUrl" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(u)}" spellcheck="false" autocomplete="off"><button class="btn" id="sheetSave">Save link</button><button class="btn" id="sheetTest">Test</button></div>
+      <p class="small" id="sheetMsg" aria-live="polite"></p></details>`;
+  }
+  function bindSheet(){
+    const msg = t => { const m = $('#sheetMsg'); if(m) m.textContent = t; };
+    $('#sheetSave').onclick = () => { const v = $('#sheetUrl').value.trim();
+      if(v && !/^https:\/\/script\.google(usercontent)?\.com\//.test(v)){ msg('That doesn\'t look like an Apps Script web app link.'); return; }
+      store.set('lesson-sheets-url', v || null); msg(v ? 'Saved on this computer.' : 'Removed.'); };
+    $('#sheetTest').onclick = async () => { const v = $('#sheetUrl').value.trim(); if(!v){ msg('Paste the link first.'); return; }
+      msg('Testing…'); try{ const r = await fetch(v); const j = await r.json(); msg(j.ok ? '✓ Connected: ' + (j.message || 'OK') : 'The script answered with an error: ' + (j.error || '')); }
+      catch(e){ msg('Could not reach the script. Check the link and that the deployment allows "Anyone".'); } };
+  }
   function panel(msg){
     if(!cfgOK()){ body().innerHTML = '<p class="lmsg">Live answering isn\'t set up on this copy. Follow README.md to connect a free Firebase project. You can still count hands by tapping the options.</p>'; return; }
     if(!st.on){
-      body().innerHTML = `${msg?`<p class="lmsg">${msg}</p>`:''}<p>Start a session so students can answer on their own devices. They join with a room code or QR code, and no names are collected.</p><div class="bar" style="margin-top:10px"><button class="btn primary" id="liveStart">Start a live session</button></div>`;
+      body().innerHTML = `${msg?`<p class="lmsg">${msg}</p>`:''}<p>Start a session so students can answer on their own devices.</p>
+        ${classPicker()}
+        <label class="followtog"><input type="checkbox" id="signinTog" ${st.signin?'checked':''}> <span><b>Students sign in with their school Google account</b><br><span class="small muted">Their names are saved with their answers. Untick for anonymous answers.</span></span></label>
+        ${sheetSetup()}
+        <div class="bar" style="margin-top:10px"><button class="btn primary" id="liveStart">Start a live session${clsId() ? ' for ' + clsId() : ''}</button></div>`;
+      bindPicker(); bindSheet();
+      $('#signinTog').onchange = e => { st.signin = e.target.checked; store.set('lesson-signin', st.signin ? 'google' : 'anon'); };
       $('#liveStart').onclick = start; return; }
-    body().innerHTML = `<p class="small muted" style="text-align:center">Students go to the link or scan the code</p>
-      <div class="roomcode">${st.code}</div><div class="qr" id="qr"></div><div class="joinurl">${esc(joinURL())}</div>
-      <p style="text-align:center;margin-top:8px"><b id="joinedN">${st.joined}</b> devices joined</p>
-      <p class="small muted" style="margin-top:8px">Press <b>Open on devices</b> on a question. Only one is open at a time. Students see how they did when you reveal; nobody sees the tallies before that.</p>
+    const cid = clsId(), su = sheetsURL();
+    const names = Object.values(st.names).filter(Boolean).sort();
+    body().innerHTML = `<p class="small muted" style="text-align:center">Students go to this address and type the room code</p>
+      <div class="joinurl big">${esc(shortURL())}</div>
+      <div class="roomcode">${st.code}</div><div class="qr" id="qr"></div>
+      <p class="small muted" style="text-align:center">On a laptop, the code opens this lesson in student view. On a phone, it opens the answer page. The QR code opens the student view directly.</p>
+      <p style="text-align:center;margin-top:8px"><b id="joinedN">${st.joined}</b> devices joined${st.signin ? ' · sign-in on' : ''}</p>
+      ${names.length ? `<details class="whojoined"><summary>Who has joined (${names.length})</summary><p class="small">${names.map(esc).join(', ')}</p></details>` : ''}
+      <label class="followtog"><input type="checkbox" id="followTog" ${st.follow?'checked':''}> <span><b>Students follow my screen</b><br><span class="small muted">Untick to let students move through the lesson at their own pace.</span></span></label>
+      <div class="savebox">
+        ${classPicker()}
+        <div class="bar">${cid && su ? `<button class="btn mark" id="sheetGo"${st.saving?' disabled':''}>${st.saving ? 'Saving…' : st.saved ? 'Save again (updates the tab)' : 'Save to Google Sheet'}</button>` : ''}<button class="btn" id="csvGo">Download CSV</button></div>
+        <p class="small" id="saveMsg" aria-live="polite">${st.msg || (!cid ? 'Choose a class to save results.' : !su ? 'Set up Google Sheets below to save automatically.' : `Results for <b>${esc(cid)}</b> are saved when you end the session.`)}</p>
+        ${st.saved ? `<p class="small"><a href="${esc(st.saved.url)}" target="_blank" rel="noopener">Open ${esc(st.saved.book || cid + ' results')} ↗</a></p>` : ''}
+        ${sheetSetup()}
+      </div>
+      <p class="small muted"><a href="${esc(studentURL())}" target="_blank" rel="noopener">Open the student view</a> to check what students see.</p>
       <div class="bar" style="margin-top:10px;justify-content:center"><button class="btn" id="liveEnd">End session</button></div>`;
-    try{ new QRCode($('#qr'), {text: joinURL(), width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M}); }catch(e){ const q = $('#qr'); if(q) q.remove(); }
+    $('#followTog').onchange = e => follow(e.target.checked);
+    bindPicker(); bindSheet();
+    if($('#sheetGo')) $('#sheetGo').onclick = () => save();
+    $('#csvGo').onclick = csv;
+    try{ new QRCode($('#qr'), {text: studentURL(), width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M}); }catch(e){ const q = $('#qr'); if(q) q.remove(); }
     $('#liveEnd').onclick = end;
   }
   const makeCode = () => { const A = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let c = ''; for(let i=0;i<5;i++) c += A[Math.floor(Math.random()*A.length)]; return c; };
+  /* the teacher uses a separate Firebase app, so a student-view tab in the same browser can't sign the teacher out */
+  const teacherApp = () => firebase.apps.find(a => a.name === 'teacher') || firebase.initializeApp(FIREBASE_CONFIG, 'teacher');
   async function start(){
     body().innerHTML = '<p>Connecting…</p>';
     try{
-      if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-      const cred = await firebase.auth().signInAnonymously();
-      st.uid = cred.user.uid; st.db = firebase.database();
+      const app = teacherApp(), auth = app.auth();
+      const cred = await auth.signInAnonymously();
+      st.uid = cred.user.uid; st.db = app.database();
       let code = '';
       for(let i=0;i<6;i++){ code = makeCode(); const snap = await st.db.ref('rooms/'+code).get(); if(!snap.exists()) break; }
-      await st.db.ref('rooms/'+code).set({owner: st.uid, created: Date.now(), active:'', open:false, reveal:-1, lesson: (document.title||'')});
+      await st.db.ref('rooms/'+code).set({owner: st.uid, created: Date.now(), active:'', open:false, reveal:-1, lesson: (document.title||''), page: location.pathname,
+        stage: STAGES[cur] ? STAGES[cur].key : '', follow: true, signin: st.signin ? 'google' : 'anon', cls: clsId()});
+      st.follow = true; st.saved = null; st.msg = '';
       st.code = code; st.on = true; document.body.classList.add('live'); $('#liveBtn').setAttribute('aria-pressed', true);
       const vref = st.db.ref(`rooms/${code}/votes`);
       const vcb = vref.on('value', snap => { const v = snap.val() || {};
@@ -698,23 +792,129 @@ const Live = (() => {
           Object.entries(raw).forEach(([u,x]) => { if(typeof x === 'number'){ if(arr[x] !== undefined) arr[x]++; } else if(x !== null && (typeof x === 'string' || typeof x === 'object')) txt[u] = x; });
           WIDGETS[q].setLive(arr, txt); }); });
       const jref = st.db.ref(`rooms/${code}/joined`);
-      const jcb = jref.on('value', snap => { st.joined = snap.exists() ? Object.keys(snap.val()).length : 0; const n = $('#joinedN'); if(n) n.textContent = st.joined; dockLabel(); });
-      st.refs = [[vref,vcb],[jref,jcb]];
+      const jcb = jref.on('value', snap => { const v = snap.val() || {}; st.joined = Object.keys(v).length;
+        const before = Object.values(st.names).join('|'); st.names = {}; Object.entries(v).forEach(([u,x]) => st.names[u] = (x && typeof x === 'object') ? String(x.name||'') : '');
+        const n = $('#joinedN'); if(n) n.textContent = st.joined; dockLabel();
+        if(Object.values(st.names).join('|') !== before && Object.values(st.names).some(Boolean) && !$('#livePanel').hidden && !(document.activeElement && document.activeElement.closest('#livePanel'))) panel(); });
+      const dref = st.db.ref(`rooms/${code}/done`);
+      const dcb = dref.on('value', snap => { const v = snap.val() || {}; st.done = {}; Object.keys(v).forEach(a => st.done[a] = Object.keys(v[a]||{}).length); pills(); if(window.Results) Results.refresh(); });
+      st.refs = [[vref,vcb],[jref,jcb],[dref,dcb]];
       panel(); dockLabel(); Object.values(WIDGETS).forEach(w => w.redraw());
     }catch(e){ console.error(e); st.on = false; panel(`Couldn't start a session: ${esc(e.message||String(e))}. Check the Firebase setup in README.md.`); }
   }
+
+  /* ---- build the session record: one row per student, one column per question/activity ---- */
+  async function sessionData(){
+    const snap = await st.db.ref('rooms/'+st.code).get(); const r = snap.val() || {};
+    const joined = r.joined || {}, votes = r.votes || {}, dn = r.done || {};
+    const uids = new Set(Object.keys(joined));
+    Object.values(votes).forEach(v => Object.keys(v||{}).forEach(u => uids.add(u)));
+    Object.values(dn).forEach(v => Object.keys(v||{}).forEach(u => uids.add(u)));
+    const studs = [...uids].map(u => { const j = joined[u]; return (j && typeof j === 'object') ? {u, name:String(j.name||j.email||''), email:String(j.email||'')} : {u, name:'', email:''}; })
+      .sort((a,b) => (a.name?0:1) - (b.name?0:1) || a.name.localeCompare(b.name));
+    let an = 0; studs.forEach(s => { if(!s.name) s.name = 'Anonymous ' + (++an); });
+    const si = key => STAGES.findIndex(s => s.key === key);
+    const stageOf = h => { const g = h.closest('.stage'); return g ? g.id.replace(/^st-/,'') : ''; };
+    const stageLabel = k => { const i = si(k); return i >= 0 ? STAGES[i].label : k; };
+    const L = 'ABCDEF', cols = [], code = [];
+    /* questions that were answered this session, in lesson order */
+    Object.values(WIDGETS).map(w => ({w, k: stageOf(w.meta.host)})).sort((a,b) => si(a.k) - si(b.k))
+      .forEach(({w, k}) => { const m = w.meta, v = votes[m.id]; if(!v || !Object.keys(v).length) return;
+        const q = QUESTIONS[m.id] || {}, type = m.type || 'choice';
+        const col = {h: `${stageLabel(k)}: ${m.title}`, marked:false, kind:'q', cell:{}};
+        if(type === 'choice'){
+          const opts = q.opts || [], c = q.correct === undefined ? -1 : q.correct; col.marked = c >= 0;
+          col.note = opts.map((o,i) => `${L[i]}: ${o}${i===c?'  ✓':''}`).join('\n');
+          Object.entries(v).forEach(([u,x]) => { if(typeof x !== 'number') return;
+            col.cell[u] = col.marked ? {v:`${x===c?'✓':'✗'} ${L[x]}`, s: x===c?'ok':'bad', ok: x===c} : {v: String(opts[x] ?? L[x]).slice(0,60), s:''}; });
+        } else if(type === 'checkin'){
+          col.note = 'Check-in (not scored)';
+          Object.entries(v).forEach(([u,x]) => { if(typeof x === 'number') col.cell[u] = {v: CHECKIN[x] || '', s: x===0?'ok':x===2?'bad':''}; });
+        } else if(type === 'text'){
+          col.marked = !!(q.accept && q.accept.length); col.note = col.marked ? 'Accepted: ' + q.accept.join(' | ') : 'Typed answer';
+          Object.entries(v).forEach(([u,x]) => { if(typeof x !== 'string') return; const ok = col.marked && q.accept.some(a => norm(a, q.mono) === norm(x, q.mono));
+            col.cell[u] = {v: (col.marked ? (ok?'✓ ':'✗ ') : '') + x, s: col.marked ? (ok?'ok':'bad') : '', ok}; });
+        } else if(type === 'code'){
+          col.marked = !!(q.tests && q.tests.length); col.note = 'Code task. Programs are listed below the table.';
+          Object.entries(v).forEach(([u,x]) => { if(!x || typeof x !== 'object') return; const ok = x.of > 0 && x.pass === x.of;
+            col.cell[u] = {v: x.of ? `${ok?'✓':'✗'} ${x.pass}/${x.of} tests` : 'sent', s: col.marked ? (ok?'ok':'bad') : '', ok};
+            const sname = (studs.find(s => s.u === u) || {}).name || '';
+            code.push({name: sname, task: m.title, tests: x.of ? `${x.pass}/${x.of}` : '', code: String(x.code||'')}); });
+        }
+        cols.push(col); });
+    /* activities finished on laptops */
+    Object.values(ACTS).map(a => ({a, i: si(a.stage)})).sort((x,y) => x.i - y.i || x.a.id.localeCompare(y.a.id, undefined, {numeric:true}))
+      .forEach(({a}) => { const d = dn[a.id]; if(!d || !Object.keys(d).length) return;
+        const kn = KIND[a.kind] || a.kind, sl = stageLabel(a.stage);
+        const col = {h: `${sl.toLowerCase() === kn.toLowerCase() ? kn : sl + ': ' + kn}${a.level ? ' (' + a.level + ')' : ''} · finished`, marked:false, kind:'act', note:'✓ = completed correctly on a laptop', cell:{}};
+        Object.keys(d).forEach(u => col.cell[u] = {v:'✓', s:'ok'}); cols.push(col); });
+    const markedCols = cols.filter(c => c.marked);
+    const rows = studs.map(s => {
+      const right = markedCols.filter(c => c.cell[s.u] && c.cell[s.u].ok).length;
+      return {name: safeCell(s.name), email: s.email, cells: cols.map(c => { const x = c.cell[s.u]; return x ? {v: safeCell(x.v), s: x.s} : {v:'', s:''}; }),
+        score: markedCols.length ? `${right}/${markedCols.length}` : '', pct: markedCols.length ? Math.round(right/markedCols.length*100) : ''}; });
+    const classRow = cols.map(c => { const xs = Object.values(c.cell), n = xs.length;
+      if(c.marked){ const k = xs.filter(x => x.ok).length; return `${n ? Math.round(k/n*100) : 0}% (${k}/${n})`; }
+      if(c.kind === 'act') return `${n} of ${studs.length}`;
+      return `${n} answered`; });
+    const pcts = rows.map(r => r.pct).filter(p => p !== '');
+    const avg = pcts.length ? Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length) : '';
+    const now = new Date(r.created || Date.now()), lesson = LESSON.title || document.title;
+    const dShort = `${now.getDate()} ${'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[now.getMonth()]}`, dLong = now.toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'long', year:'numeric'}) + ' ' + now.toTimeString().slice(0,5);
+    return { v:1, cls: clsId(), year: st.cls.y, yearLabel: yearLabel(st.cls.y), lesson, date: now.toISOString(),
+      tabName: `${dShort} · ${lesson}`.slice(0, 90), replace: st.saved ? st.saved.tab : '',
+      title: `${clsId()} · ${lesson}`, subtitle: `${dLong} · ${studs.length} students · room ${st.code}${avg !== '' ? ' · class average ' + avg + '%' : ''}`,
+      columns: cols.map(c => ({h: safeCell(c.h), note: c.note || ''})), rows, classRow, classAvg: avg === '' ? '' : avg,
+      code: code.map(c => ({name: safeCell(c.name), task: safeCell(c.task), tests: c.tests, code: safeCell(c.code)})) };
+  }
+  async function save(){
+    const url = sheetsURL(), cid = clsId();
+    if(!url || !cid || st.saving) return false;
+    st.saving = true; st.msg = 'Saving to Google Sheets…'; if(!$('#livePanel').hidden) panel();
+    let ok = false;
+    try{
+      const data = await sessionData();
+      const res = await fetch(url, {method:'POST', body: JSON.stringify(data)});
+      const j = await res.json();
+      if(!j.ok) throw new Error(j.error || 'The script returned an error');
+      st.saved = {url: j.url, tab: j.tab, book: j.book}; st.msg = `✓ Saved to “${j.book}”, tab “${j.tab}”.`; ok = true;
+    }catch(e){ console.error(e); st.msg = 'Saving failed: ' + (e.message || e) + '. Try again, or download the CSV.'; }
+    st.saving = false; if(!$('#livePanel').hidden) panel();
+    return ok;
+  }
+  async function csv(){
+    try{
+      const d = await sessionData();
+      const q = x => { const s = String(x ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
+      const lines = [['Student','Email'].concat(d.columns.map(c => c.h)).concat(['Score','%'])]
+        .concat(d.rows.map(r => [r.name, r.email].concat(r.cells.map(c => c.v)).concat([r.score, r.pct])))
+        .concat([['Class',''].concat(d.classRow).concat(['', d.classAvg])]);
+      const blob = new Blob(['﻿' + lines.map(l => l.map(q).join(',')).join('\r\n')], {type:'text/csv'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = `${d.cls || 'class'} ${d.tabName}.csv`.replace(/[\\/:*?"<>|]/g,' '); document.body.appendChild(a); a.click(); a.remove();
+    }catch(e){ console.error(e); alert('Could not make the CSV: ' + (e.message || e)); }
+  }
   async function end(){
+    if(clsId() && sheetsURL()){
+      const ok = await save();
+      if(!ok && !confirm('The results could not be saved to Google Sheets.\n\nEnd the session anyway? Press Cancel to try again or download the CSV first.')) return;
+    }
     st.refs.forEach(([r,cb]) => r.off('value', cb)); st.refs = [];
     try{ await st.db.ref('rooms/'+st.code).remove(); }catch(e){}
-    st.on = false; st.code = ''; st.active = ''; st.open = false;
+    st.on = false; st.code = ''; st.active = ''; st.open = false; st.names = {};
     document.body.classList.remove('live'); $('#liveBtn').setAttribute('aria-pressed', false);
-    Object.values(WIDGETS).forEach(w => { w.setLive([], {}); w.setState('', false); }); panel(); dockLabel();
+    Object.values(WIDGETS).forEach(w => { w.setLive([], {}); w.setState('', false); }); st.done = {}; pills();
+    const keep = st.saved; panel(keep ? `Session ended. ${esc(st.msg)} <a href="${esc(keep.url)}" target="_blank" rel="noopener">Open the sheet ↗</a>` : ''); dockLabel();
   }
+  function pills(){ $$('.donepill').forEach(p => { p.hidden = !st.on; $('b', p).textContent = st.done[p.dataset.for] || 0; }); }
+  function follow(on){ st.follow = !!on; upd({follow: st.follow, stage: STAGES[cur] ? STAGES[cur].key : ''}); }
   const states = () => Object.keys(WIDGETS).forEach(q => WIDGETS[q].setState(st.active, st.open));
   const dockLabel = () => { $('#dLive').textContent = st.on ? `Room ${st.code} · ${st.joined}` : ''; };
   const upd = obj => st.on ? st.db.ref('rooms/'+st.code).update(obj).catch(e => console.error(e)) : Promise.resolve();
   return {
-    panel, get on(){ return st.on; },
+    panel, get on(){ return st.on; }, get joined(){ return st.joined; }, get done(){ return st.done; },
+    sessionData, save, csv,
+    stage(key){ if(st.on) upd({stage:key}); },
     open(id, q){ if(!st.on){ togglePanel(true); return; } st.active = id; st.open = true; states(); upd({active:id, open:true, reveal:-1, revealed:false, question:q}); },
     close(){ if(!st.on) return; st.open = false; states(); upd({open:false}); },
     reveal(id, payload){ if(!st.on) return; const o = {['answers/'+id]: payload};
@@ -724,6 +924,210 @@ const Live = (() => {
       const o = {['answers/'+id]: null}; if(st.active === id){ o.reveal = -1; o.revealed = false; } upd(o); },
     deleteAnswer(id, uid){ if(!st.on) return; st.db.ref(`rooms/${st.code}/votes/${id}/${uid}`).remove().catch(()=>{}); }
   };
+})();
+
+/* ---------------- student view (?student): answering inside the lesson page ---------------- */
+function studentAsk(sel, id, q){
+  const h = host(sel), type = q.type || 'choice';
+  const opts = type === 'checkin' ? CHECKIN : (q.opts || []);
+  const L = i => 'ABCDEF'[i];
+  h.innerHTML = `<p class="sstate" aria-live="polite"></p>` + (
+    type === 'code' ? `<div class="sed"></div><div class="bar"><button class="btn send ssend">Send to teacher</button></div>` :
+    type === 'text' ? `<div class="stext"><input class="sinput${q.mono?' mono':''}" maxlength="120" placeholder="${esc(q.placeholder||'Type your answer')}" aria-label="Your answer" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn primary ssend">Send</button></div>` :
+    `<div class="sopts">${opts.map((o,i)=>`<button class="sopt" data-i="${i}" aria-pressed="false" disabled><span class="l">${L(i)}</span><span class="t">${esc(o)}</span></button>`).join('')}</div>`)
+    + `<div class="ssent" hidden></div><div class="skey" hidden></div><div class="sres" aria-live="polite"></div>`;
+  let ed = null, sending = false, pend;
+  const tests = cleanTests(q.tests);
+  const dkey = 'lesson-code:' + location.pathname + ':' + id;
+  if(type === 'code'){
+    let draft = null; try{ draft = sessionStorage.getItem(dkey); }catch(e){}
+    ed = editor($('.sed', h), q.starter || '', {inputs: q.inputs, tests: tests.length ? () => tests : null, noTrack:true, passMsg:'All tests passed. Now send it to your teacher.'});
+    if(draft !== null){ ed.textarea.value = draft; ed.textarea.dispatchEvent(new Event('input')); }
+    ed.textarea.addEventListener('input', () => { try{ sessionStorage.setItem(dkey, ed.textarea.value); }catch(e){} });
+  }
+  const send = async v => { pend = v; update();
+    try{ await Student.send(id, v); }catch(e){ $('.sstate', h).textContent = 'That did not send. It may have closed.'; }
+    pend = undefined; update(); };
+  if(type === 'code') $('.ssend', h).onclick = async () => {
+    const src = ed.value;
+    if(!src.trim()){ $('.sstate', h).textContent = 'Write some code first.'; return; }
+    if(src.length > 4000){ $('.sstate', h).textContent = 'Your program is too long to send (4000 characters max).'; return; }
+    sending = true; update();
+    const res = tests.length ? await ed.check() : [];
+    sending = false;
+    send({code: src, pass: res.filter(x => x.pass).length, of: res.length, r: res.map(x => x.pass ? '1' : '0').join('')});
+  };
+  else if(type === 'text'){
+    const inp = $('.sinput', h);
+    $('.ssend', h).onclick = () => { const v = inp.value.trim().slice(0,120); if(v) send(v); };
+    inp.addEventListener('keydown', e => { if(e.key === 'Enter') $('.ssend', h).click(); });
+  } else $$('.sopt', h).forEach(b => b.onclick = () => send(+b.dataset.i));
+
+  function update(){
+    const r = Student.room, on = Student.on && !!r;
+    const active = on && r.active === id, open = active && r.open === true;
+    const saved = on && r.votes && r.votes[id] ? r.votes[id][Student.uid] : undefined;
+    const mine = pend !== undefined ? pend : saved;
+    let key = on && r.answers ? r.answers[id] : undefined; if(typeof key === 'number') key = {c:key};
+    const shown = !!key;
+    const marked = !!key && (key.code ? key.marked : (key.c !== undefined && key.c >= 0) || !!(key.a && key.a.length));
+    $('.sstate', h).textContent = !Student.on ? 'Join your class at the top of the page to answer.'
+      : open ? (type === 'code' ? (mine === undefined ? 'Open: write your code, Run it, then Send to teacher.' : 'Sent. You can improve it and send again.')
+               : type === 'text' ? (mine === undefined ? 'Open: type your answer and press Send.' : 'Sent. You can change it until it closes.')
+               : (mine === undefined ? 'Open: choose your answer.' : 'Sent. You can change it until it closes.'))
+      : active ? (mine !== undefined ? 'Closed. Your answer was sent.' : 'Closed.')
+      : shown ? 'Your teacher has shown the answers.'
+      : (type === 'code' ? 'You can try the code now. Sending opens when your teacher is ready.' : 'Waiting for your teacher to open this question.');
+    h.classList.toggle('sopen', open);
+    if(type === 'code'){
+      $('.ssend', h).disabled = !open || sending;
+      $('.ssend', h).textContent = sending ? 'Checking…' : mine === undefined ? 'Send to teacher' : 'Send again';
+    } else if(type === 'text'){
+      const inp = $('.sinput', h);
+      inp.disabled = !open; $('.ssend', h).disabled = !open;
+      if(document.activeElement !== inp && mine !== undefined && !inp.value) inp.value = mine;
+      $('.ssend', h).textContent = mine === undefined ? 'Send' : 'Change';
+    } else {
+      $$('.sopt', h).forEach((b,i) => { b.disabled = !open; b.setAttribute('aria-pressed', i === mine);
+        b.classList.toggle('right', shown && key.c === i); b.classList.toggle('wrongpick', shown && key.c !== undefined && key.c >= 0 && i === mine && i !== key.c); });
+    }
+    const sent = $('.ssent', h);
+    sent.hidden = mine === undefined || type === 'choice' || type === 'checkin';
+    if(!sent.hidden) sent.textContent = type === 'code' ? (mine.of ? `Sent to your teacher · ${mine.pass} of ${mine.of} tests passed` : 'Sent to your teacher') : `Answer sent: ${mine}`;
+    const k = $('.skey', h);
+    if(shown && type === 'text' && key.a){ k.hidden = false; k.innerHTML = `Answer: ${key.a.map(a => `<code>${esc(a)}</code>`).join(' · ')}`; }
+    else if(shown && type === 'code' && key.model){ k.hidden = false; k.innerHTML = `<div>Model answer</div>${codeBlock(key.model)}`; }
+    else k.hidden = true;
+    let right = false;
+    if(marked && mine !== undefined){
+      if(key.code) right = !!(mine && mine.of > 0 && mine.pass === mine.of);
+      else if(key.c !== undefined) right = mine === key.c;
+      else right = key.a.some(a => norm(a, key.mono) === norm(mine, key.mono));
+    }
+    $('.sres', h).innerHTML = (marked && mine !== undefined)
+      ? (right ? `<div class="feedback good">${type === 'code' ? 'All tests passed! 잘했어요!' : 'Correct! 정답입니다!'}</div>` : `<div class="feedback bad">${type === 'code' ? 'Not all tests passed yet. Compare with the model answer.' : 'Not this time. Check the answer.'}</div>`) : '';
+  }
+  Student.widgets[id] = {update, q, type};
+  update();
+}
+
+const Student = (() => {
+  const st = {on:false, code:'', uid:'', db:null, room:null, off:null, ended:false, sent:new Set(), pendingDone:new Set(), pendingCode:'', name:''};
+  const widgets = {};
+  const cfgOK = () => !!(window.firebase && window.FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey && !/PASTE/i.test(FIREBASE_CONFIG.apiKey) && FIREBASE_CONFIG.databaseURL);
+  const locked = () => !!(st.on && st.room && st.room.follow !== false);
+  function bar(){
+    const b = $('#sBar'); if(!b) return;
+    if(!st.on && st.pendingCode){
+      b.innerHTML = `<span class="room">Room ${esc(st.pendingCode)}</span><span>Your teacher wants you to sign in first.</span><button class="btn primary gbtn" id="sGoogle"><span class="g" aria-hidden="true">G</span> Sign in with your school Google account</button><span class="serr" id="sErr" aria-live="polite"></span>`;
+      $('#sGoogle').onclick = googleSignIn; return;
+    }
+    if(!st.on){
+      if(!cfgOK()){ b.innerHTML = '<span class="small muted">Working on your own</span>'; return; }
+      b.innerHTML = `${st.ended ? '<span class="small muted">The session ended. You can keep working.</span>' : ''}<input id="sCode" class="scode" maxlength="5" placeholder="Room code" aria-label="Room code" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn primary" id="sJoin">Join class</button><span class="serr" id="sErr" aria-live="polite"></span>`;
+      const qp = new URLSearchParams(location.search).get('room'); if(qp && !st.ended) $('#sCode').value = qp.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,5);
+      $('#sJoin').onclick = () => join($('#sCode').value);
+      $('#sCode').addEventListener('keydown', e => { if(e.key === 'Enter') join($('#sCode').value); });
+      return;
+    }
+    b.innerHTML = `<span class="room">Room ${esc(st.code)}</span>${st.name ? `<span class="sname">👤 ${esc(st.name)}</span>` : ''}<span class="sfollow" id="sFollow"></span><span class="score" id="sScore" hidden></span>`;
+    status();
+  }
+  function score(){
+    const r = st.room, ans = (r && r.answers) || {}; let right = 0, marked = 0;
+    Object.keys(ans).forEach(q => { let k = ans[q]; if(typeof k === 'number') k = {c:k};
+      const mine = r.votes && r.votes[q] ? r.votes[q][st.uid] : undefined;
+      if(k.code){ if(!k.marked) return; marked++; if(mine && mine.of > 0 && mine.pass === mine.of) right++; return; }
+      if(k.c !== undefined){ if(k.c < 0) return; marked++; if(mine === k.c) right++; return; }
+      if(k.a && k.a.length){ marked++; if(mine !== undefined && k.a.some(a => norm(a, k.mono) === norm(mine, k.mono))) right++; } });
+    return {right, marked};
+  }
+  function status(){
+    const f = $('#sFollow'); if(f) f.textContent = locked() ? '🔒 Following your teacher' : '🔓 Free to explore';
+    const sc = $('#sScore'); if(sc){ const {right, marked} = score(); sc.hidden = !marked; sc.textContent = `✓ ${right} / ${marked}`; }
+  }
+  function toast(){
+    const t = $('#sToast'); if(!t) return;
+    const r = st.room;
+    if(!st.on || !r || !r.open || !r.active){ t.hidden = true; return; }
+    const hostEl = $(`[data-vote="${r.active}"]`), stg = hostEl && hostEl.closest('.stage');
+    const i = stg ? STAGES.findIndex(s => 'st-' + s.key === stg.id) : -1;
+    if(i < 0 || i === cur){ t.hidden = true; return; }
+    t.hidden = false;
+    t.innerHTML = `<span>Your teacher opened a question</span><button class="btn primary">Go to it →</button>`;
+    $('button', t).onclick = () => { go(i, true); hostEl.scrollIntoView({block:'center'}); };
+  }
+  const schoolEmail = e => !!e && e.toLowerCase().endsWith('@' + SCHOOL_DOMAIN);
+  async function googleSignIn(){
+    const err = m => { const e = $('#sErr'); if(e) e.textContent = m; };
+    try{
+      const auth = firebase.auth(), prov = new firebase.auth.GoogleAuthProvider();
+      prov.setCustomParameters({hd: SCHOOL_DOMAIN, prompt: 'select_account'});
+      const cred = await auth.signInWithPopup(prov);
+      if(!schoolEmail(cred.user.email)){ await auth.signOut(); err(`Please use your school account (…@${SCHOOL_DOMAIN}).`); return; }
+      const c = st.pendingCode; st.pendingCode = ''; join(c);
+    }catch(e){ console.error(e);
+      err(/popup-blocked/.test(e.code||'') ? 'Your browser blocked the sign-in window. Allow pop-ups for this site and try again.'
+        : /popup-closed|cancelled-popup/.test(e.code||'') ? 'The sign-in window was closed. Try again.'
+        : /unauthorized-domain/.test(e.code||'') ? 'Sign-in is not set up for this website yet. Tell your teacher (authorised domains).'
+        : /admin_policy|access_denied|disallowed/i.test(String(e.message||'')) ? 'Your school account is not allowed to sign in to this app yet. Tell your teacher.'
+        : 'Sign-in did not work: ' + (e.message || e)); }
+  }
+  async function join(raw){
+    const c = String(raw||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    const err = m => { const e = $('#sErr'); if(e) e.textContent = m; };
+    if(c.length !== 5){ err('The room code has 5 letters or numbers.'); return; }
+    err(''); const btn = $('#sJoin'); if(btn){ btn.disabled = true; btn.textContent = 'Joining…'; }
+    try{
+      if(!firebase.apps.some(a => a.name === '[DEFAULT]')) firebase.initializeApp(FIREBASE_CONFIG);
+      const auth = firebase.auth();
+      if(auth.authStateReady) await auth.authStateReady();
+      if(!auth.currentUser) await auth.signInAnonymously();
+      st.db = firebase.database();
+      const snap = await st.db.ref('rooms/'+c).get();
+      if(!snap.exists()) throw new Error('Room not found. Check the code on the board.');
+      const needGoogle = snap.val().signin === 'google';
+      const u = auth.currentUser;
+      if(needGoogle && (u.isAnonymous || !schoolEmail(u.email))){ st.pendingCode = c; bar(); return; }
+      st.uid = u.uid;
+      await st.db.ref(`rooms/${c}/joined/${st.uid}`).set(needGoogle ? {name: String(u.displayName || u.email).slice(0,80), email: u.email} : true);
+      st.name = needGoogle ? String(u.displayName || u.email) : '';
+      st.code = c; st.on = true; st.ended = false; st.sent = new Set();
+      document.body.classList.add('joined');
+      const ref = st.db.ref('rooms/'+c), cb = ref.on('value', s => onRoom(s.val()));
+      st.off = () => ref.off('value', cb);
+      try{ const u = new URL(location.href); u.searchParams.set('room', c); history.replaceState(null, '', u.pathname + '?student&room=' + c); }catch(e){}
+      bar();
+      st.pendingDone.forEach(id => api.done(id)); st.pendingDone.clear();
+    }catch(e){
+      console.error(e);
+      bar(); const m = (e.message && !/permission/i.test(e.message)) ? e.message : 'Could not join. Check the code and try again.';
+      const ee = $('#sErr'); if(ee) ee.textContent = m;
+    }
+  }
+  function onRoom(r){
+    if(!r){ leave(true); return; }
+    st.room = r;
+    document.body.classList.toggle('locked', locked());
+    if(locked() && r.stage){ const i = STAGES.findIndex(s => s.key === r.stage); if(i >= 0 && i !== cur) go(i, true); }
+    Object.values(widgets).forEach(w => w.update());
+    status(); toast();
+  }
+  function leave(ended){
+    if(st.off) st.off(); st.off = null; st.on = false; st.room = null; st.ended = !!ended;
+    document.body.classList.remove('locked', 'joined');
+    Object.values(widgets).forEach(w => w.update()); bar(); toast();
+  }
+  const api = {
+    widgets, join, bar,
+    get on(){ return st.on; }, get room(){ return st.room; }, get uid(){ return st.uid; }, get locked(){ return locked(); },
+    send(id, v){ return st.db.ref(`rooms/${st.code}/votes/${id}/${st.uid}`).set(v); },
+    done(id){ if(!id || st.sent.has(id)) return;
+      if(!st.on){ st.pendingDone.add(id); return; }
+      st.sent.add(id); st.db.ref(`rooms/${st.code}/done/${id}/${st.uid}`).set(true).catch(() => st.sent.delete(id)); },
+    refresh(){ toast(); }
+  };
+  return api;
 })();
 
 /* ---------------- results ---------------- */
@@ -761,10 +1165,20 @@ const Results = (() => {
       return `<div class="res-row${all?'':' empty'}"><span class="t">${esc(stage)} · ${esc(m.title)}</span><div class="res-bar"><i class="c" style="width:${pct}%"></i><i class="w" style="width:${all?100-pct:0}%"></i></div><span class="m">${all?`${pct}% correct · ${c} of ${all}`:'No responses yet'}</span></div>`;
     }).join('');
     const avg = nq ? Math.round(sumPct/nq) : null;
+    let acts = '';
+    if(Live.on && Object.keys(ACTS).length){
+      const J = Live.joined, dn = Live.done, cap = x => x ? ' (' + x[0].toUpperCase() + x.slice(1) + ')' : '';
+      const list = Object.values(ACTS).map(a => ({a, si: STAGES.findIndex(s => s.key === a.stage)})).sort((x,y) => x.si - y.si || x.a.id.localeCompare(y.a.id, undefined, {numeric:true}));
+      lines.push('', 'Finished on student laptops:');
+      acts = `<h4 class="res-h">Finished on student laptops <span class="small muted">(${J} joined)</span></h4>` + list.map(({a,si}) => {
+        const n = dn[a.id] || 0, pc = J ? Math.min(100, n/J*100) : 0, sl = STAGES[si] ? STAGES[si].label : a.stage, kn = KIND[a.kind] || a.kind, name = (sl.toLowerCase() === kn.toLowerCase() ? kn : `${sl} · ${kn}`) + cap(a.level);
+        lines.push(`${name}: ${n} of ${J}`);
+        return `<div class="res-row${n?'':' empty'}"><span class="t">${esc(name)}</span><div class="res-bar"><i class="c" style="width:${pc}%"></i></div><span class="m">${n} of ${J} finished</span></div>`; }).join('');
+    }
     api.text = `${document.title} results (${new Date().toLocaleDateString()})\n` + (avg!==null?`Average correct: ${avg}% across ${nq} questions\n`:'') + lines.join('\n');
     return `<p class="small muted">Includes device answers and hand counts.</p>
       <p style="margin:8px 0"><span class="res-sum">${avg===null?'–':avg+'%'}</span> <span class="muted">average correct${nq?` across ${nq} question${nq>1?'s':''}`:''}</span></p>
-      ${rows}<div class="bar" style="margin-top:10px"><button class="btn" id="resCopy">Copy summary</button><span class="status" id="resMsg"></span></div>`;
+      ${rows}${acts}<div class="bar" style="margin-top:10px"><button class="btn" id="resCopy">Copy summary</button><span class="status" id="resMsg"></span></div>`;
   }
   function bindCopy(){ const b = $('#resCopy'); if(b) b.onclick = async () => { try{ await navigator.clipboard.writeText(api.text); $('#resMsg').textContent = 'Copied.'; }catch(e){ $('#resMsg').textContent = 'Copy not allowed here. Select the text instead.'; } }; }
   let t = null;
@@ -787,12 +1201,15 @@ function setLevel(lv){
 
 /* ---------------- shell ---------------- */
 let ROOT = './', STAGES = [], cur = 0;
+const STUDENT = new URLSearchParams(location.search).has('student');
+let QUESTIONS = {}, LESSON = {};
 function togglePanel(force){
   const d = $('#livePanel'); const show = force === undefined ? d.hidden : force;
   if(show){ ['gloss','picker','resPanel'].forEach(x => $('#'+x).hidden = true); $('#glossBtn').setAttribute('aria-pressed', false); $('#pickBtn').setAttribute('aria-pressed', false); $('#resBtn').setAttribute('aria-pressed', false); Live.panel(); }
   d.hidden = !show;
 }
-function go(i){
+function go(i, fromTeacher){
+  if(STUDENT && Student.locked && !fromTeacher) return;
   cur = Math.max(0, Math.min(STAGES.length-1, i));
   $$('.stage').forEach((s,k) => s.hidden = k !== cur);
   $$('.step').forEach((b,k) => { if(k === cur) b.setAttribute('aria-current','step'); else b.removeAttribute('aria-current'); });
@@ -801,6 +1218,7 @@ function go(i){
   $('#dLabel').innerHTML = `${esc(STAGES[cur].label)} <span>${cur+1}/${STAGES.length}</span>`;
   $('#dPrev').disabled = cur === 0; $('#dNext').disabled = cur === STAGES.length-1;
   window.scrollTo({top:0});
+  if(STUDENT) Student.refresh(); else if(Live.on) Live.stage(STAGES[cur].key);
 }
 function setPresent(on){
   document.body.classList.toggle('present', on);
@@ -836,8 +1254,11 @@ function shell(cfg){
         <button class="tbtn present-btn" id="presentBtn" title="Present mode (P)">⛶ Present</button>
       </div>
     </div>
+    ${STUDENT ? '<div class="sbar" id="sBar"></div>' : ''}
     <nav class="steps" id="steps" aria-label="Lesson stages"></nav>
+    ${STUDENT ? '<p class="sfollowbar">🔒 Your screen follows your teacher. Work on this page.</p>' : ''}
   </div></div>
+  ${STUDENT ? '<div class="stoast" id="sToast" hidden role="status"></div>' : ''}
 
   <aside class="drawer" id="gloss" hidden aria-label="Key words">
     <div class="bar" style="justify-content:space-between;margin-bottom:10px"><h3>Key words · 핵심 용어</h3><button class="tbtn" data-close="gloss">Close</button></div>
@@ -887,7 +1308,7 @@ function shell(cfg){
     hostEl.innerHTML = `<div class="eyebrow">${isCheck ? 'Class check-in' : q.type === 'text' ? 'Type your answer' : q.type === 'code' ? 'Code on your laptop' : 'Class vote'}</div>
       <p class="big-q" style="font-size:${isCheck?'1.25rem':'1.45rem'}">${esc(q.title)}</p>
       ${q.code ? codeBlock(q.code) : ''}<div class="vw"></div>`;
-    askWidget($('.vw', hostEl), id, q);
+    if(STUDENT) studentAsk($('.vw', hostEl), id, q); else askWidget($('.vw', hostEl), id, q);
   });
 
   /* tools */
@@ -937,10 +1358,11 @@ function shell(cfg){
     if(/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
     if(e.key === 'ArrowRight' || e.key === 'PageDown') go(cur+1);
     if(e.key === 'ArrowLeft' || e.key === 'PageUp') go(cur-1);
-    if(e.key === 'p' || e.key === 'P') setPresent(!document.body.classList.contains('present'));
+    if(!STUDENT && (e.key === 'p' || e.key === 'P')) setPresent(!document.body.classList.contains('present'));
   });
   window.addEventListener('beforeunload', e => { if(Live.on){ e.preventDefault(); e.returnValue = ''; } });
   if(!window.firebase) $('#liveBtn').hidden = true;
+  if(STUDENT){ document.body.classList.add('student'); document.title = document.title + ' · student'; }
 }
 
 /* ---------------- entry point ---------------- */
@@ -948,15 +1370,16 @@ function start(cfg){
   const tag = document.currentScript || $('script[data-root]');
   ROOT = (cfg.root !== undefined) ? cfg.root : ((tag && tag.dataset.root) ? tag.dataset.root : './');
   if(ROOT && !ROOT.endsWith('/')) ROOT += '/';
-  STAGES = cfg.stages;
+  STAGES = cfg.stages; QUESTIONS = cfg.questions || {}; LESSON = cfg;
   Results.setStages(STAGES);
   shell(cfg);
   if(cfg.ready) cfg.ready();
   setLevel(cfg.level || 'core');
   go(0);
+  if(STUDENT){ Student.bar(); const r = new URLSearchParams(location.search).get('room'); if(r && window.firebase) Student.join(r); }
 }
 
-return { start, editor, codeTask, trace, parsons, gaps, annotate, sorter, askWidget, bugHunt, loopTrace, rangeExplorer,
+return { start, editor, codeTask, studentAsk, Student, ACTS, trace, parsons, gaps, annotate, sorter, askWidget, bugHunt, loopTrace, rangeExplorer,
   code: codeBlock, scopeCode, hl, run: runPython, showResult, onLevel, setLevel,
   $, $$, esc, CHECKIN, WIDGETS, Live, Results, get root(){ return ROOT; } };
 })();
