@@ -6,7 +6,7 @@
 <title>Python Functions</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap">
-<link rel="stylesheet" href="../shared/lesson.css?v=12">
+<link rel="stylesheet" href="../shared/lesson.css?v=13">
 <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -14,7 +14,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="../firebase-config.js"></script>
-<script src="../shared/lesson.js?v=12"></script>
+<script src="../shared/lesson.js?v=13"></script>
 </head>
 <body>
 <script>
@@ -129,28 +129,24 @@ L.start({
   ],
   questions: {
     'q-why': {title:'What is the main reason programmers use functions?', opts:['It makes the program run faster','You write code once and reuse it','Every Python program must have one','It stops all errors'], correct:1},
-    'predict': {title:'What will this program print?', opts:['Room: 12\nDesk: 2','Room: result\nDesk: result','(nothing is printed)','Room: 7\nDesk: 3'], correct:0, code:AREA},
+    'predict': {title:'What will this program print?', opts:['Room: 12\nDesk: 2','Room: result\nDesk: result','(nothing is printed)','Room: 7\nDesk: 3'], correct:0},
     'q-run': {title:'After line 5 runs, what is stored in the variable room?', opts:['area','4, 3','12','result'], correct:2},
     't-param': {type:'text', title:'Type the two parameters of area, separated by a comma.', accept:['length, width','width, length'], mono:true, placeholder:'e.g. one, two'},
     'q-param': {title:'In the call area(4, 3), what are 4 and 3?', opts:['parameters','arguments','return values','local variables'], correct:1},
     't-scope': {type:'text', title:'Type the name of the local variable created on line 4.', accept:['total'], placeholder:'one word'},
-    'q-scope1': {title:'What happens when line 9 runs?', opts:['It prints 15','It prints total','NameError: total is not defined','It prints 0'], correct:2, code:SCOPE_SRC},
-    'q-scope2': {title:'Challenge: what does the last line print?', opts:['outside: 10','outside: 99','An error','outside: None'], correct:0, code:SHADOW_SRC},
-    'c-annotate': {type:'checkin', title:'Annotate code: how did you get on?'},
-    'c-parsons': {type:'checkin', title:'Parsons problem: how did you get on?'},
+    'q-scope1': {title:'What happens when line 9 runs?', opts:['It prints 15','It prints total','NameError: total is not defined','It prints 0'], correct:2},
+    'q-scope2': {title:'Challenge: what does the last line print?', opts:['outside: 10','outside: 99','An error','outside: None'], correct:0},
     'q-gaps': {title:'If line 3 said print(cost) instead of return cost, what would the last line print?', opts:['Total: 13500 won','Total: None won','An error','Total: cost won'], correct:1},
     't-print': {type:'text', title:'Type exactly what the finished program prints.', accept:['Total: 13500 won','13500'], placeholder:'Total: … won'},
-    'c-gaps': {type:'checkin', title:'Fill the gaps: how did you get on?'},
-    'c-modify': {type:'checkin', title:'Modify: did your code pass the checks?'},
     't-def': {type:'text', title:'Type the def line for a function called greet that takes one parameter, name.', accept:['def greet(name):'], mono:true, placeholder:'def …'},
-    'c-make': {type:'checkin', title:'Make: did your code pass the checks?'},
     'ex1': {title:'Which keyword sends a value back from a function?', opts:['print','return','def','output'], correct:1},
     'ex2': {title:'In  def square(n):  the n is…', opts:['an argument','a parameter','a return value','a function name'], correct:1},
     'ex3': {title:'What does this program print?', opts:['6','12','9','An error'], correct:1, code:'def double(x):\n    return x * 2\n\nprint(double(double(3)))'},
+    'c-lesson': {type:'checkin', title:'How did you get on with today\'s tasks?'},
     'conf': {title:'How confident do you feel about functions now?', opts:['1 · Not yet','2','3','4','5 · Very confident'], correct:-1}
   },
   stages: [
-    {key:'intro', label:'Why functions?', html:`
+    {key:'intro', label:'Starter', html:`
       <div class="stage-head"><div><div class="eyebrow">Starter · 5 minutes</div><h2 id="h-intro">Why do programmers use functions?</h2></div></div>
       <div class="cols">
         <div class="panel"><h3>Look at this program. What is the problem with it?</h3>
@@ -184,18 +180,41 @@ show_score(40)`)}
           </div>
         </div>
       </div>
-      <div class="panel"><h3>By the end of this lesson I can…</h3>
-        <ul class="obj">
-          <li>define a function using <code>def</code> and call it by its name</li>
-          <li>explain the difference between a parameter and an argument</li>
-          <li>use <code>return</code> to send a value back from a function</li>
-          <li>say whether a variable is global or local</li>
-        </ul></div>
       <div data-vote="q-why"></div>
       <div class="notes"><h3>Teacher notes</h3><ul>
         <li>Give pairs 60 seconds of <b>think–pair–share</b> before showing the answer. Pair talk comes before writing, because many students find reading harder than speaking.</li>
         <li>Open <b>Key words</b> and go through <i>parameter / argument / return</i> with the Korean translations.</li>
         <li>The lesson follows PRIMM (the dashed stages): Predict → Run → Investigate → Modify → Make.</li></ul></div>`},
+
+    {key:'objectives', label:'Objectives', html:`
+      <div class="stage-head"><div><div class="eyebrow">Objectives · 학습 목표</div><h2 id="h-objectives">What we are learning today</h2></div>
+      <p class="lead">Functions let us write code once and use it many times.</p></div>
+      <div class="cols">
+        <div class="panel"><h3>By the end of this lesson I can…</h3>
+          <ul class="obj">
+            <li>define a function using <code>def</code> and call it by its name</li>
+            <li>explain the difference between a parameter and an argument</li>
+            <li>use <code>return</code> to send a value back from a function</li>
+            <li>say whether a variable is global or local</li>
+          </ul></div>
+        <div class="panel"><h3>How will I know I can do it?</h3>
+          <p><span class="tier support">Support</span>I can call a function that is already written, and change the argument.</p>
+          <p><span class="tier core">Core</span>I can write a function with a parameter and a <code>return</code>, and test it.</p>
+          <p><span class="tier stretch">Stretch</span>I can explain why a local variable disappears, and write a function that calls another function.</p>
+          <p class="small muted" style="margin-top:8px">New words today: <b>function · def · parameter · argument · return · global · local</b>. Press <b>Key words</b> at the top for the Korean meanings.</p></div>
+      </div>
+      <div class="panel"><h3>The plan</h3>
+        <ol class="obj">
+          <li><b>Predict, Run, Investigate</b> a program that uses a function</li>
+          <li>Global and local variables</li>
+          <li>Annotate · Parsons problem · fill the gaps</li>
+          <li><b>Modify</b> and then <b>Make</b> your own function</li>
+          <li>Exit ticket</li>
+        </ol></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Read the objectives aloud, then ask a student to say the Core success criterion in their own words.</li>
+        <li>Point out that Stretch is harder thinking, not more work.</li>
+        <li>Come back to this page at the end and check each objective against the exit ticket.</li></ul></div>`},
 
     {key:'predict', label:'Predict', primm:true, html:`
       <div class="stage-head"><div><div class="eyebrow">PRIMM · Predict</div><h2 id="h-predict">What will this program print?</h2></div>
@@ -285,7 +304,6 @@ show_score(40)`)}
       <div class="panel"><h3>Now you try: annotate with comments</h3>
         <p>In Python, annotations are written as <b>comments</b> that start with <code>#</code>. Python ignores them, but they help people understand your code. Add a comment to each line, then run it to check the program still works.</p>
         <div id="annEd"></div></div>
-      <div data-vote="c-annotate"></div>
       <div class="notes"><h3>Teacher notes</h3><ul>
         <li>At the front: pick a student to choose an annotation, then ask the class "Which line? Thumbs up if you agree." Ask what words in the code gave it away.</li>
         <li>This checks reading of both English and code, so it suits low reading levels. Pre-teach <i>local variable</i>, <i>arguments</i> and <i>calls</i>.</li>
@@ -298,7 +316,6 @@ show_score(40)`)}
       <p data-show="core"><span class="tier core">Core</span>Put the lines in order <b>and</b> set the indentation with ⇤ and ⇥.</p>
       <p data-show="stretch"><span class="tier stretch">Stretch</span>Order and indent the lines. <b>Two lines are not needed.</b> Leave them in the bank and explain why they're wrong.</p>
       <div id="parsonsHost"></div>
-      <div data-vote="c-parsons"></div>
       <div class="notes"><h3>Teacher notes</h3><ul>
         <li>Do this at the front: a pair says which line comes next, you tap it, and the class agrees or challenges.</li>
         <li>Stretch distractors: <code>return celsius</code> (wrong value) and <code>print(fahrenheit)</code> (NameError, because fahrenheit is local).</li>
@@ -317,7 +334,6 @@ show_score(40)`)}
         </div>
       </div>
       <div class="cols"><div data-vote="t-print"></div><div data-vote="q-gaps"></div></div>
-      <div data-vote="c-gaps"></div>
       <div class="notes"><h3>Teacher notes</h3><ul>
         <li>Answers: <code>def</code>, <code>quantity</code>, <code>*</code>, <code>return</code>, <code>total_price</code>.</li>
         <li>Pick a student to choose a gap and give its word, then ask the class "Agree or disagree? Why?".</li>
@@ -340,7 +356,6 @@ show_score(40)`)}
         </div>
         <div class="panel"><div id="modEd"></div></div>
       </div>
-      <div data-vote="c-modify"></div>
       <div class="notes"><h3>Teacher notes</h3><ul>
         <li>All three tasks change the same starting code, so the class can compare solutions at the end.</li>
         <li><b>Check my code</b> uses the tests for the level currently selected.</li>
@@ -364,7 +379,6 @@ show_score(40)`)}
         </div>
         <div class="panel"><div id="makeEd"></div></div>
       </div>
-      <div data-vote="c-make"></div>
       <div class="notes"><h3>Teacher notes</h3><ul>
         <li>Open the typed question first: everyone types a <code>def</code> line before they start, so you can spot missing colons and brackets straight away.</li>
         <li>Suggested time is 12–15 minutes. Use the timer, and check in with the Support group in the first 3 minutes.</li>
@@ -376,7 +390,7 @@ show_score(40)`)}
       <div data-vote="ex1"></div>
       <div data-vote="ex2"></div>
       <div data-vote="ex3"></div>
-      <div data-vote="conf"></div>
+      <div class="cols"><div data-vote="c-lesson"></div><div data-vote="conf"></div></div>
       <div class="notes"><h3>Teacher notes</h3><ul>
         <li>Question 3 is the hardest: the inner <code>double(3)</code> runs first and returns 6, then <code>double(6)</code> returns 12.</li>
         <li>Open <b>Results</b> at the end and use <b>Copy summary</b> for your records. Note who answered question 2 wrongly (parameter vs argument) and start next lesson with a retrieval question on it.</li></ul></div>`}

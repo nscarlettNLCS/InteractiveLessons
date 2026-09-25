@@ -6,7 +6,7 @@
 <title>Python While Loops</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap">
-<link rel="stylesheet" href="../shared/lesson.css?v=12">
+<link rel="stylesheet" href="../shared/lesson.css?v=13">
 <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -14,7 +14,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="../firebase-config.js"></script>
-<script src="../shared/lesson.js?v=12"></script>
+<script src="../shared/lesson.js?v=13"></script>
 </head>
 <body>
 <script>
@@ -111,10 +111,8 @@ L.start({
   ],
   questions: {
     't-colon': {type:'text', title:'Which symbol must end every for line?', accept:[':','colon'], placeholder:'one symbol'},
-    'c-bugs': {type:'checkin', title:'Bug hunt: how did you get on?'},
-    'c-sort': {type:'checkin', title:'For or while: how many did you get right?'},
     'q-when': {title:'A robot drives forward until it senses a wall. Which loop fits best?', opts:['for','while','Either — it makes no difference','No loop is needed'], correct:1},
-    'predict': {title:'What will this program print?', opts:['1 2 3 Done','1 2 3 4 Done','0 1 2 3 Done','1 1 1 1 … forever'], correct:0, code:COUNT},
+    'predict': {title:'What will this program print?', opts:['1 2 3 Done','1 2 3 4 Done','0 1 2 3 Done','1 1 1 1 … forever'], correct:0},
     't-stop': {type:'text', title:'What number is count when the loop stops?', accept:['4'], placeholder:'a number'},
     'q-checks': {title:'How many times is the condition count <= 3 checked?', opts:['3','4','5','1'], correct:1},
     'q-inf': {title:'Which of these loops never stops?', opts:['n = 5\nwhile n > 0:\n    n = n - 1','n = 5\nwhile n > 0:\n    print(n)','n = 0\nwhile n < 3:\n    n = n + 1','n = 10\nwhile n > 20:\n    print(n)'], correct:1},
@@ -125,15 +123,13 @@ L.start({
       tests:[{label:'Prints Battery: 100, 75, 50, 25', output:'Battery: 100\nBattery: 75\nBattery: 50\nBattery: 25\nRecharge me!'},
              {label:"Prints Recharge me!", contains:"Recharge me!"},
              {label:'The loop stops (no infinite loop)', lines:5}]},
-    'q-pass': {title:'The Inputs are: cat, dog, robot123. How many times is "Wrong, try again" printed?', opts:['0','1','2','3'], correct:2, code:PASSWORD},
-    'c-parsons': {type:'checkin', title:'Parsons problem: how did you get on?'},
+    'q-pass': {title:'The Inputs are: cat, dog, robot123. How many times is "Wrong, try again" printed?', opts:['0','1','2','3'], correct:2},
     't-weeks': {type:'text', title:'How many weeks does it take to save the money?', accept:['7'], placeholder:'a number'},
-    'c-gaps': {type:'checkin', title:'Fill the gaps: how did you get on?'},
-    'c-make': {type:'checkin', title:'Make: did your code pass the checks?'},
     'ex1': {title:'When should you use a while loop?', opts:['When you know exactly how many times to repeat','When you repeat until something happens','Only when you are using numbers','Never — for is always better'], correct:1},
     'ex2': {title:'What does this program print?', opts:['8','10','16','32'], correct:2, code:'n = 1\nwhile n < 10:\n    n = n * 2\nprint(n)'},
     't-ex3': {type:'text', title:'What does != mean? Type it in words.', accept:['not equal','not equal to','is not equal to','is not equal'], placeholder:'…'},
     'ex4': {title:'What is missing from this loop?', opts:['a colon','i = i + 1','print()','range()'], correct:1, code:'i = 0\nwhile i < 5:\n    print(i)'},
+    'c-lesson': {type:'checkin', title:'How did you get on with today\'s tasks?'},
     'conf': {title:'How confident do you feel about while loops now?', opts:['1 · Not yet','2','3','4','5 · Very confident'], correct:-1}
   },
   stages: [
@@ -149,11 +145,41 @@ L.start({
       <div data-show="support"><div class="panel"><h3><span class="tier support">Support</span>2 bugs to find</h3><div id="bugS"></div></div></div>
       <div data-show="core"><div class="panel"><h3><span class="tier core">Core</span>3 bugs to find</h3><div id="bugC"></div></div></div>
       <div data-show="stretch"><div class="panel"><h3><span class="tier stretch">Stretch</span>3 bugs — two of them run without an error!</h3><div id="bugX"></div></div></div>
-      <div class="cols"><div data-vote="t-colon"></div><div data-vote="c-bugs"></div></div>
+      <div data-vote="t-colon"></div>
       <div class="notes"><h3>Teacher notes</h3><ul>
         <li>Pairs find the bugs <b>before</b> running. Then run it and read the error message together.</li>
         <li>Answers — Support: line 1 missing <code>:</code>, line 2 not indented. Core: line 1 <code>]</code> should be <code>)</code>, line 2 missing comma, line 3 <code>If</code> should be <code>if</code>. Stretch: line 2 step should be <code>-2</code>, line 3 missing <code>)</code>, line 4 should <b>not</b> be indented.</li>
         <li>Stretch shows a new idea: a <b>logic error</b>. The code runs but does the wrong thing.</li></ul></div>`},
+
+    {key:'objectives', label:'Objectives', html:`
+      <div class="stage-head"><div><div class="eyebrow">Objectives · 학습 목표</div><h2 id="h-objectives">What we are learning today</h2></div>
+      <p class="lead">A <b>while loop</b> keeps going <b>until</b> something changes.</p></div>
+      <div class="cols">
+        <div class="panel"><h3>By the end of this lesson I can…</h3>
+          <ul class="obj">
+            <li>say when to use a <code>while</code> loop instead of a <code>for</code> loop</li>
+            <li>write a <code>while</code> loop with a condition that stops</li>
+            <li>spot and fix a loop that never stops</li>
+            <li>use a <code>while</code> loop with <code>input()</code></li>
+          </ul></div>
+        <div class="panel"><h3>How will I know I can do it?</h3>
+          <p><span class="tier support">Support</span>I can finish a countdown loop by changing the variable each time.</p>
+          <p><span class="tier core">Core</span>I can write a loop that keeps asking until the answer is right.</p>
+          <p><span class="tier stretch">Stretch</span>I can add a counter or a limit, and explain why my loop stops.</p>
+          <p class="small muted" style="margin-top:8px">New words today: <b>while · condition · infinite loop · input</b>. Press <b>Key words</b> at the top for the Korean meanings.</p></div>
+      </div>
+      <div class="panel"><h3>The plan</h3>
+        <ol class="obj">
+          <li>for or while? · <b>Predict</b> and trace a while loop</li>
+          <li>Infinite loops, and how to stop them</li>
+          <li>Code it live on your laptop · loops with <code>input()</code></li>
+          <li>Parsons problem · fill the gaps · <b>Make</b> your own loop</li>
+          <li>Exit ticket</li>
+        </ol></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Read the objectives aloud after the bug hunt, then ask a student to say the Core criterion in their own words.</li>
+        <li>Stretch is harder thinking, not more work. Point that out.</li>
+        <li>Come back here at the end and check each objective against the exit ticket.</li></ul></div>`},
 
     {key:'sort', label:'For or while?', html:`
       <div class="stage-head"><div><div class="eyebrow">New idea</div><h2 id="h-sort">Two kinds of loop</h2></div></div>
@@ -165,7 +191,7 @@ L.start({
         <p data-show="support" class="small"><span class="tier support">Support</span>Ask: <i>do I know the number of times before I start?</i> Yes → for. No → while.</p>
         <p data-show="stretch" class="small"><span class="tier stretch">Stretch</span>One job could use either loop. Which is it, and which would you choose?</p>
         <div id="sortHost"></div></div>
-      <div class="cols"><div data-vote="q-when"></div><div data-vote="c-sort"></div></div>
+      <div data-vote="q-when"></div>
       <div class="notes"><h3>Teacher notes</h3><ul>
         <li>Real-life examples first: "Stir the soup 20 times" (for) vs "Stir until it boils" (while). "Run 5 laps" vs "Run until the whistle".</li>
         <li>Countdown from 10 can be either. <code>for</code> is simpler because you know it's 10 numbers.</li>
@@ -274,7 +300,6 @@ L.start({
       <p data-show="core"><span class="tier core">Core</span>Order the lines <b>and</b> set the indentation with ⇤ and ⇥.</p>
       <p data-show="stretch"><span class="tier stretch">Stretch</span>Order and indent. <b>Two lines are not needed</b> — one would make an infinite loop.</p>
       <div id="parsonsHost"></div>
-      <div data-vote="c-parsons"></div>
       <div class="notes"><h3>Teacher notes</h3><ul>
         <li>Expected output: <code>Lives left: 3</code>, <code>Lives left: 2</code>, <code>Lives left: 1</code>, <code>Game over</code>.</li>
         <li>Stretch distractors: <code>while lives &lt; 0:</code> never runs; <code>lives = lives + 1</code> makes an infinite loop.</li></ul></div>`},
@@ -290,7 +315,7 @@ L.start({
           <li data-show="stretch"><details class="q"><summary><span class="tier stretch">Stretch</span>What happens if you change &lt; to &lt;= ? Does the answer change?</summary><div class="ans">No — 21,000 is still the first amount over 20,000. It would only change if the savings could land exactly on 20,000.</div></details></li>
         </ul></div>
       </div>
-      <div class="cols"><div data-vote="t-weeks"></div><div data-vote="c-gaps"></div></div>
+      <div data-vote="t-weeks"></div>
       <div class="notes"><h3>Teacher notes</h3><ul>
         <li>Answers: <code>while</code>, <code>&lt;</code>, <code>:</code>, <code>+</code>. Output: <code>It took 7 weeks to save 21000 won</code>.</li>
         <li>Ask students to predict the number of weeks before running it. Many will say 6 or 7 — a good discussion.</li></ul></div>`},
@@ -313,7 +338,6 @@ L.start({
         </div>
         <div class="panel"><div id="makeEd"></div></div>
       </div>
-      <div data-vote="c-make"></div>
       <div class="notes"><h3>Teacher notes</h3><ul>
         <li>10–12 minutes. The checks run the program several times with different inputs, so hard-coding won't pass.</li>
         <li>Stretch: <code>guesses = 1</code> after the first input, and <code>guesses = guesses + 1</code> after each new input inside the loop.</li></ul></div>`},
@@ -324,7 +348,7 @@ L.start({
       <div data-vote="ex1"></div>
       <div class="cols"><div data-vote="ex2"></div><div data-vote="ex4"></div></div>
       <div data-vote="t-ex3"></div>
-      <div data-vote="conf"></div>
+      <div class="cols"><div data-vote="c-lesson"></div><div data-vote="conf"></div></div>
       <div class="notes"><h3>Teacher notes</h3><ul>
         <li>Question 2 is the hardest: n goes 1, 2, 4, 8, 16. When n is 16, <code>16 &lt; 10</code> is False, so it prints 16.</li>
         <li>Open <b>Results</b> and <b>Copy summary</b> for your records.</li></ul></div>`}

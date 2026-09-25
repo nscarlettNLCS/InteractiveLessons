@@ -6,7 +6,7 @@
 <title>Python For Loops</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap">
-<link rel="stylesheet" href="../shared/lesson.css?v=12">
+<link rel="stylesheet" href="../shared/lesson.css?v=13">
 <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -14,7 +14,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="../firebase-config.js"></script>
-<script src="../shared/lesson.js?v=12"></script>
+<script src="../shared/lesson.js?v=13"></script>
 </head>
 <body>
 <script>
@@ -123,24 +123,21 @@ L.start({
   ],
   questions: {
     't-colon': {type:'text', title:'Which symbol is missing from the end of an if line or an else line?', accept:[':','colon'], placeholder:'one symbol'},
-    'c-bugs': {type:'checkin', title:'Bug hunt: how did you get on?'},
     'q-times': {title:'How many times will this print "Hip hip hooray!"?', opts:['2','3','4','It keeps going forever'], correct:1, code:'for i in range(3):\n    print("Hip hip hooray!")'},
-    'predict': {title:'What will this program print?', opts:['1 2 3 4 5','0 1 2 3 4','0 1 2 3 4 5','5'], correct:1, code:PREDICT},
+    'predict': {title:'What will this program print?', opts:['1 2 3 4 5','0 1 2 3 4','0 1 2 3 4 5','5'], correct:1},
     't-var': {type:'text', title:'In  for i in range(5):  what is the name of the loop variable?', accept:['i'], placeholder:'one letter'},
     'q-range1': {title:'Which numbers does range(1, 6) give?', opts:['1 2 3 4 5 6','0 1 2 3 4 5','1 2 3 4 5','2 3 4 5 6'], correct:2},
     't-range': {type:'text', title:'Type the numbers that range(2, 10, 3) gives, separated by commas.', accept:['2, 5, 8','2 5 8'], mono:true, placeholder:'e.g. 1, 2, 3'},
     'q-count': {title:'Which range() counts down 5, 4, 3, 2, 1?', opts:['range(5, 1)','range(5, 0, -1)','range(1, 5, -1)','range(5, 1, -1)'], correct:1},
     'q-trace': {title:'Look at the trace table. What is total after the 3rd loop?', opts:['3','5','6','10'], correct:2},
     't-lasti': {type:'text', title:'What is the last value of i in this loop?', accept:['4'], placeholder:'a number'},
-    'q-robot': {title:'How many times does the robot print "Move forward"?', opts:['1','3','4','5'], correct:1, code:ROBOT},
+    'q-robot': {title:'How many times does the robot print "Move forward"?', opts:['1','3','4','5'], correct:1},
     'q-even': {title:'What does this program print?', opts:['1 is even\n3 is even','2 is even\n4 is even','2 is even','Nothing'], correct:1, code:EVEN},
-    'c-parsons': {type:'checkin', title:'Parsons problem: how did you get on?'},
-    'c-gaps': {type:'checkin', title:'Fill the gaps: how did you get on?'},
-    'c-make': {type:'checkin', title:'Make: did your code pass the checks?'},
     'ex1': {title:'How many times does a range(4) loop repeat?', opts:['3','4','5','0'], correct:1},
     'ex2': {title:'What is the first number range(2, 6) gives?', opts:['0','1','2','6'], correct:2},
     't-ex3': {type:'text', title:'Type the numbers range(0, 10, 5) gives, separated by commas.', accept:['0, 5','0 5'], mono:true, placeholder:'e.g. 1, 2'},
     'ex4': {title:'What does this program print?', opts:['A\nA\nA','A\nB\nB','B\nA\nA','A\nB\nA'], correct:1, code:'for i in range(3):\n    if i == 0:\n        print("A")\n    else:\n        print("B")'},
+    'c-lesson': {type:'checkin', title:'How did you get on with today\'s tasks?'},
     'conf': {title:'How confident do you feel about for loops now?', opts:['1 · Not yet','2','3','4','5 · Very confident'], correct:-1}
   },
   stages: [
@@ -156,12 +153,42 @@ L.start({
       <div data-show="support"><div class="panel"><h3><span class="tier support">Support</span>2 bugs to find</h3><div id="bugS"></div></div></div>
       <div data-show="core"><div class="panel"><h3><span class="tier core">Core</span>3 bugs to find</h3><div id="bugC"></div></div></div>
       <div data-show="stretch"><div class="panel"><h3><span class="tier stretch">Stretch</span>4 bugs to find</h3><div id="bugX"></div></div></div>
-      <div class="cols"><div data-vote="t-colon"></div><div data-vote="c-bugs"></div></div>
+      <div data-vote="t-colon"></div>
       <div class="notes"><h3>Teacher notes</h3><ul>
         <li>Pairs find the bugs <b>before</b> anyone runs the code. Then run it and read the error message together: which line number does Python point to?</li>
         <li>Point out that Python often reports the error on the line <i>after</i> a missing bracket or quote.</li>
         <li>Answers — Support: line 2 missing <code>)</code>, line 3 missing closing <code>"</code>. Core: line 2 missing <code>:</code>, line 3 <code>Print</code> should be <code>print</code>, line 5 not indented. Stretch: line 2 <code>=&gt;</code> should be <code>&gt;=</code>, line 4 <code>prnt</code>, line 5 missing <code>:</code>, line 6 missing closing <code>"</code>.</li>
         <li>Praise the method, not just the answer: "You checked every bracket — that's exactly what programmers do."</li></ul></div>`},
+
+    {key:'objectives', label:'Objectives', html:`
+      <div class="stage-head"><div><div class="eyebrow">Objectives · 학습 목표</div><h2 id="h-objectives">What we are learning today</h2></div>
+      <p class="lead">A <b>for loop</b> repeats lines of code a set number of times.</p></div>
+      <div class="cols">
+        <div class="panel"><h3>By the end of this lesson I can…</h3>
+          <ul class="obj">
+            <li>say what a <code>for</code> loop does and when to use one</li>
+            <li>use <code>range()</code> with 1, 2 or 3 numbers</li>
+            <li>follow a loop using a trace table</li>
+            <li>put an <code>if</code> inside a loop</li>
+          </ul></div>
+        <div class="panel"><h3>How will I know I can do it?</h3>
+          <p><span class="tier support">Support</span>I can write a loop that repeats a line 5 times.</p>
+          <p><span class="tier core">Core</span>I can choose the right <code>range()</code> and put an <code>if</code> inside my loop.</p>
+          <p><span class="tier stretch">Stretch</span>I can count backwards with a step, and explain what each part of <code>range()</code> does.</p>
+          <p class="small muted" style="margin-top:8px">New words today: <b>loop · range · trace table · condition</b>. Press <b>Key words</b> at the top for the Korean meanings.</p></div>
+      </div>
+      <div class="panel"><h3>The plan</h3>
+        <ol class="obj">
+          <li>Why loops? · <b>Predict</b> and <b>Run</b> a loop</li>
+          <li>The <code>range()</code> explorer and trace tables</li>
+          <li>Parsons problem · loops with <code>if</code> · fill the gaps</li>
+          <li><b>Make</b> your own loop</li>
+          <li>Exit ticket</li>
+        </ol></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Read the objectives aloud after the bug hunt, then ask a student to say the Core criterion in their own words.</li>
+        <li>Stretch is harder thinking, not more work. Point that out.</li>
+        <li>Come back here at the end and check each objective against the exit ticket.</li></ul></div>`},
 
     {key:'why', label:'Why loops?', html:`
       <div class="stage-head"><div><div class="eyebrow">New idea</div><h2 id="h-why">Why do we need loops?</h2></div></div>
@@ -259,7 +286,6 @@ L.start({
       <p data-show="core"><span class="tier core">Core</span>Order the lines <b>and</b> set the indentation with ⇤ and ⇥.</p>
       <p data-show="stretch"><span class="tier stretch">Stretch</span>Order and indent. <b>Two lines are not needed.</b></p>
       <div id="parsonsHost"></div>
-      <div data-vote="c-parsons"></div>
       <div class="notes"><h3>Teacher notes</h3><ul>
         <li>Build it at the front with the class telling you the next line.</li>
         <li>Stretch distractors: <code>range(1, 10)</code> would stop at 7 × 9, and a <code>print</code> outside the loop would only run once.</li>
@@ -300,7 +326,6 @@ L.start({
           <li data-show="stretch"><details class="q"><summary><span class="tier stretch">Stretch</span>Change it to count down in 2s from 20. What prints at the end?</summary><div class="ans"><code>range(20, 0, -2)</code> gives 20, 18 … 2, then "Lift off!". "Nearly there!" never prints, because 3 isn't in the list.</div></details></li>
         </ul></div>
       </div>
-      <div data-vote="c-gaps"></div>
       <div class="notes"><h3>Teacher notes</h3><ul>
         <li>Answers: <code>for</code>, <code>range</code>, <code>-1</code>, <code>:</code>, <code>==</code>.</li>
         <li>Common mistake: using <code>=</code> instead of <code>==</code> in the <code>if</code>. One equals stores a value; two equals compares.</li></ul></div>`},
@@ -323,7 +348,6 @@ L.start({
         </div>
         <div class="panel"><div id="makeEd"></div></div>
       </div>
-      <div data-vote="c-make"></div>
       <div class="notes"><h3>Teacher notes</h3><ul>
         <li>10–12 minutes. Check in with the Support group within the first 3 minutes.</li>
         <li>The checks compare the printed output exactly (spaces and capitals don't matter).</li>
@@ -335,7 +359,7 @@ L.start({
       <div class="cols"><div data-vote="ex1"></div><div data-vote="ex2"></div></div>
       <div data-vote="t-ex3"></div>
       <div data-vote="ex4"></div>
-      <div data-vote="conf"></div>
+      <div class="cols"><div data-vote="c-lesson"></div><div data-vote="conf"></div></div>
       <div class="notes"><h3>Teacher notes</h3><ul>
         <li>Question 4 combines everything: the loop runs 3 times (0, 1, 2), and only the first time is <code>i == 0</code>.</li>
         <li>Open <b>Results</b> and <b>Copy summary</b> for your records. Start next lesson with a retrieval question on whichever question scored lowest.</li></ul></div>`}
