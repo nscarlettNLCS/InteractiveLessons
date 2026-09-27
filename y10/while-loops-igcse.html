@@ -6,7 +6,7 @@
 <title>While Loops · IGCSE 0478</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap">
-<link rel="stylesheet" href="../shared/lesson.css?v=14">
+<link rel="stylesheet" href="../shared/lesson.css?v=15">
 <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -14,7 +14,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="../firebase-config.js"></script>
-<script src="../shared/lesson.js?v=14"></script>
+<script src="../shared/lesson.js?v=15"></script>
 </head>
 <body>
 <script>
@@ -146,14 +146,14 @@ L.start({
   ],
 
   questions: {
-    'q-zero': {title:'A while loop checks its condition <b>before</b> the body runs. What is the smallest number of times the body can run?', opts:['0','1','2','It always runs at least once'], correct:0},
+    'q-zero': {title:'A while loop checks its condition BEFORE the body runs. What is the smallest number of times the body can run?', opts:['0','1','2','It always runs at least once'], correct:0},
     'predict': {title:'What are the last two lines printed?', opts:['Score: 30 / Lives: 0','Score: 30 / Lives: -1','Score: 10 / Lives: 2','Nothing — it never stops'], correct:0},
     't-cond': {type:'text', title:'Type the condition from line 3 of the program above.', accept:['count <= 4','count<=4'], mono:true, placeholder:'count …'},
     'q-passes': {title:'How many times does the loop body run?', opts:['3','4','5','Once'], correct:1},
     'q-error': {title:'A program runs with no error message, but prints 10 instead of 15. What kind of error is this?', opts:['Syntax error','Logic error','Runtime error','No error'], correct:1},
     't-fix': {type:'text', title:'In the countdown program, type the missing line that stops it looping forever.', accept:['count = count - 1','count -= 1'], mono:true, placeholder:'count = …'},
-    'q-break': {title:'What does <code>break</code> do?', opts:['Pauses the program for a second','Leaves the loop immediately','Goes back to the start of the loop','Stops the whole program'], correct:1},
-    'q-true': {title:'Why would a programmer write <code>while True:</code> with a <code>break</code> inside, instead of a condition at the top?', opts:['It runs faster','The input has to be read before it can be tested','It uses less memory','It is the only way to loop forever'], correct:1},
+    'q-break': {title:'What does the keyword break do?', opts:['Pauses the program for a second','Leaves the loop immediately','Goes back to the start of the loop','Stops the whole program'], correct:1},
+    'q-true': {title:'Why would a programmer write "while True:" with a break inside, instead of a condition at the top?', opts:['It runs faster','The input has to be read before it can be tested','It uses less memory','It is the only way to loop forever'], correct:1},
     'k-validate': {type:'code', title:'Validation loop: keep asking until the age is in range', hint:'Use if age >= 1 and age <= 120: then break',
       inputs:'200, 0, 45',
       starter:'while True:\n    age = int(input("Enter your age (1-120): "))\n    # if the age is in range, leave the loop\n\n    print("Out of range, try again")\n\nprint("Thank you")',
@@ -166,7 +166,7 @@ L.start({
     't-gaps': {type:'text', title:'How many times is "Too short - try again" printed?', accept:['1','once'], placeholder:'a number'},
     'ex1': {title:'Which loop would you choose to keep asking for a password until it is correct?', opts:['A count-controlled loop, because it is faster','A condition-controlled (while) loop, because the number of tries is not known','Either — there is no difference','No loop is needed'], correct:1},
     'ex2': {title:'What is printed?', code:'x = 10\nwhile x > 10:\n    print(x)\n    x = x - 1\nprint("End")', opts:['10 then End','End','10 9 8 … then End','Nothing at all'], correct:1},
-    't-ex3': {type:'text', title:'Write the condition for a loop that keeps going while <code>tries</code> is less than 3.', accept:['tries < 3','while tries < 3:','tries<3'], mono:true, placeholder:'tries …'},
+    't-ex3': {type:'text', title:'Write the condition for a loop that keeps going while tries is less than 3.', accept:['tries < 3','while tries < 3:','tries<3'], mono:true, placeholder:'tries …'},
     'ex4': {title:'A loop never stops. Which is the most likely cause?', opts:['A missing colon','The variable in the condition never changes','The loop body is indented','There is a break in the loop'], correct:1},
     'c-lesson': {type:'checkin', title:'How did you get on with today\'s tasks?'},
     'conf': {title:'How confident do you feel about while loops now?', opts:['1 · Not yet','2','3','4','5 · Very confident'], correct:-1}
@@ -246,9 +246,10 @@ L.start({
       <div id="traceHost"></div>
       <div class="cols"><div data-vote="t-cond"></div><div data-vote="q-passes"></div></div>
       <div class="notes"><h3>Teacher notes</h3><ul>
-        <li>Model row 1 on the board first: <code>count</code> is 1, the condition is TRUE, <code>total</code> becomes 1.</li>
+        <li>Model the first two rows on the board: row 1 is the set-up (<code>count</code> 1, <code>total</code> 0, no test yet); row 2 is the first pass (condition TRUE, <code>total</code> 1, <code>count</code> 2).</li>
         <li>Point out the final row: the condition is FALSE, the loop ends, and only then is <code>10</code> printed.</li>
-        <li>Answers: rows 1–4 are TRUE with totals 1, 3, 6, 10; row 5 is <code>count</code> 5, FALSE, total 10, output 10.</li>
+        <li>Answers: set-up row 1, 0; then TRUE rows with totals 1, 3, 6, 10 and count 2, 3, 4, 5; last row is FALSE, total stays 10 and 10 is printed.</li>
+        <li>At Support the set-up row and the first pass are filled in, so students start from row 3.</li>
         <li>In the exam, marks are given for the values, not for neat handwriting. Tell students to write every change.</li>
         <li><b>Show answers</b> is on your screen only — students see it when you project it.</li></ul></div>`},
 
@@ -403,22 +404,25 @@ while i <= 5:       # correct
     /* trace table for students to complete */
     L.traceFill('#traceHost', {
       code: TRACE,
-      note: 'Write one row each time the condition on line 3 is tested. Leave OUTPUT empty until something is printed.',
-      cols: ['count', 'count <= 4', 'total', 'OUTPUT'],
-      rows: [['1','TRUE','1',''],
-             ['2','TRUE','3',''],
-             ['3','TRUE','6',''],
-             ['4','TRUE','10',''],
-             ['5','FALSE','10','10']],
+      note: 'Row 1 is the set-up (lines 1 and 2), so the condition column is empty. After that, write one row for each time the condition is tested: TRUE or FALSE, then the values at the end of that pass.',
+      given: 2,
+      cols: ['count', 'total', 'count <= 4', 'OUTPUT'],
+      rows: [['1','0','',''],
+             ['2','1','TRUE',''],
+             ['3','3','TRUE',''],
+             ['4','6','TRUE',''],
+             ['5','10','TRUE',''],
+             ['5','10','FALSE','10']],
       finalQ: {label:'What is printed at the end?', answer:'10'}
     });
 
     /* infinite loop demo */
     L.$('#infRun').onclick = async () => { const o = L.$('#infOut'); o.hidden = false; o.textContent = 'Running…';
-      L.showResult(o, await L.run(`count = 5
+      const r = await L.run(`count = 5
 while count > 0:
     print(count)
-print("Lift off!")`)); };
+print("Lift off!")`);
+      L.showResult(o, r, {maxLines: 8, more: 'the same line forever — the page stopped the program after 3 seconds'}); };
 
     /* while True + break demo */
     L.$('#pinRun').onclick = async () => { const o = L.$('#pinOut'); o.hidden = false; o.textContent = 'Running…';

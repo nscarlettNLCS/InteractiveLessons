@@ -82,10 +82,15 @@ function runPython(code, inputs){
       .then(() => resolve({ok:true, out}), e => resolve({ok:false, out, err:String(e)}));
   });
 }
-function showResult(pre, r){
+function showResult(pre, r, opts){
+  opts = opts || {};
   const lines = r.out.split('\n');
-  const shown = lines.filter(l => !l.startsWith(TEST)).join('\n');
+  let keep = lines.filter(l => !l.startsWith(TEST));
+  let trimmed = false;
+  if(opts.maxLines && keep.length > opts.maxLines){ keep = keep.slice(0, opts.maxLines); trimmed = true; }
+  const shown = keep.join('\n');
   let html = esc(shown.replace(/\n$/,''));
+  if(trimmed) html += `\n<span class="hint">… ${esc(opts.more || 'output continues')}</span>`;
   if(!r.ok){ html += (html?'\n':'') + `<span class="err">${esc(r.err)}</span>`; const f = friendly(r.err); if(f) html += `<span class="hint">Hint: ${esc(f)}</span>`; }
   if(!html) html = '<span style="color:var(--code-muted)">(no output)</span>';
   pre.innerHTML = html;
