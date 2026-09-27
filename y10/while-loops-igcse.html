@@ -6,7 +6,7 @@
 <title>While Loops · IGCSE 0478</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap">
-<link rel="stylesheet" href="../shared/lesson.css?v=15">
+<link rel="stylesheet" href="../shared/lesson.css?v=17">
 <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -14,7 +14,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="../firebase-config.js"></script>
-<script src="../shared/lesson.js?v=15"></script>
+<script src="../shared/lesson.js?v=17"></script>
 </head>
 <body>
 <script>
@@ -246,9 +246,11 @@ L.start({
       <div id="traceHost"></div>
       <div class="cols"><div data-vote="t-cond"></div><div data-vote="q-passes"></div></div>
       <div class="notes"><h3>Teacher notes</h3><ul>
-        <li>Model the first two rows on the board: row 1 is the set-up (<code>count</code> 1, <code>total</code> 0, no test yet); row 2 is the first pass (condition TRUE, <code>total</code> 1, <code>count</code> 2).</li>
+        <li>Model the first two rows on the board: row 1 is the set-up (<code>count</code> 1, <code>total</code> 0); row 2 is the first test, which is TRUE with <code>count</code> still 1, so the <code>count</code> cell stays empty and <code>total</code> becomes 1.</li>
+        <li>Say the rule out loud: <b>write a value only when it changes</b>, and the <code>count</code> written in a row is the value the condition was tested with. This is how the exam expects trace tables to be filled in.</li>
         <li>Point out the final row: the condition is FALSE, the loop ends, and only then is <code>10</code> printed.</li>
-        <li>Answers: set-up row 1, 0; then TRUE rows with totals 1, 3, 6, 10 and count 2, 3, 4, 5; last row is FALSE, total stays 10 and 10 is printed.</li>
+        <li>Answers: set-up row (<code>count</code> 1, <code>total</code> 0); then TRUE rows with totals 1, 3, 6, 10 and <code>count</code> left empty, 2, 3, 4; last row is <code>count</code> 5, FALSE, <code>total</code> stays 10, and 10 is printed.</li>
+        <li>Empty cells are correct answers here. Tell students that an empty cell means "this did not change", not "I don't know".</li>
         <li>At Support the set-up row and the first pass are filled in, so students start from row 3.</li>
         <li>In the exam, marks are given for the values, not for neat handwriting. Tell students to write every change.</li>
         <li><b>Show answers</b> is on your screen only — students see it when you project it.</li></ul></div>`},
@@ -404,15 +406,15 @@ while i <= 5:       # correct
     /* trace table for students to complete */
     L.traceFill('#traceHost', {
       code: TRACE,
-      note: 'Row 1 is the set-up (lines 1 and 2), so the condition column is empty. After that, write one row for each time the condition is tested: TRUE or FALSE, then the values at the end of that pass.',
+      note: 'Write a value only when it changes. Row 1 is the set-up (lines 1 and 2). After that, each row is one test of the condition: TRUE or FALSE, the new total, and the new count once it has changed.',
       given: 2,
-      cols: ['count', 'total', 'count <= 4', 'OUTPUT'],
-      rows: [['1','0','',''],
-             ['2','1','TRUE',''],
-             ['3','3','TRUE',''],
-             ['4','6','TRUE',''],
-             ['5','10','TRUE',''],
-             ['5','10','FALSE','10']],
+      cols: ['count', 'count <= 4', 'total', 'OUTPUT'],
+      rows: [['1','','0',''],
+             ['','TRUE','1',''],
+             ['2','TRUE','3',''],
+             ['3','TRUE','6',''],
+             ['4','TRUE','10',''],
+             ['5','FALSE','10','10']],
       finalQ: {label:'What is printed at the end?', answer:'10'}
     });
 
