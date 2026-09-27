@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>While Loops · IGCSE 0478</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="../shared/lesson.css?v=14">
+<script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="../firebase-config.js"></script>
+<script src="../shared/lesson.js?v=14"></script>
+</head>
+<body>
+<script>
+const L = Lesson, code = L.code;
+
+/* ---------- starter: logic errors (each program runs, but does the wrong thing) ---------- */
+const BUG_SUPPORT = `# Should count down 5, 4, 3, 2, 1 and then stop
+count = 5
+while count > 0:
+    print(count)
+print("Lift off!")`;
+
+const BUG_CORE = `# Should add up 1 + 2 + 3 + 4 + 5 and print 15
+total = 0
+i = 1
+while i < 5:
+    total = total + i
+    i = i + 1
+print("Total:", total)`;
+
+const BUG_STRETCH = `# Should print the average of the marks entered before -1
+total = 0
+count = 0
+mark = int(input("Mark (-1 to stop): "))
+while mark != -1:
+    total = 0
+    total = total + mark
+    count = count + 1
+    mark = int(input("Mark (-1 to stop): "))
+print("Average:", total / count)`;
+
+const FIX_SUPPORT = `count = 5
+while count > 0:
+    print(count)
+    count = count - 1
+print("Lift off!")`;
+
+/* ---------- predict / trace ---------- */
+const PREDICT = `score = 0
+lives = 3
+while lives > 0:
+    score = score + 10
+    lives = lives - 1
+print("Score:", score)
+print("Lives:", lives)`;
+
+const TRACE = `count = 1
+total = 0
+while count <= 4:
+    total = total + count
+    count = count + 1
+print(total)`;
+
+/* ---------- while True + break ---------- */
+const PIN = `while True:
+    pin = input("Enter PIN: ")
+    if pin == "1234":
+        print("Unlocked")
+        break
+    print("Wrong PIN")`;
+
+const NOBREAK = `pin = ""
+while pin != "1234":
+    pin = input("Enter PIN: ")
+print("Unlocked")`;
+
+/* ---------- gaps: validation loop ---------- */
+const GAPS_BUILD = g => `password = "abc"
+__WHILE__ len(password) __OP__ 8:
+    print("Too short - try again")
+    password = "mysecretpass"
+print("Password accepted")`
+  .replace('__WHILE__', g[0]).replace('__OP__', g[1]);
+
+/* ---------- make ---------- */
+const MAKE_START = {
+  support: `# Print 10, 9, 8 ... down to 1, then "Done"
+count = 10
+while count > 0:
+    # print the count, then make it 1 smaller
+
+print("Done")`,
+  core: `# Keep asking for a number until the user types a number over 100.
+# Then print how many numbers they typed.
+# The Inputs box below types the numbers in for you.
+tries = 0
+number = 0
+while number <= 100:
+    number = int(input("Enter a number: "))
+
+print("You typed", tries, "numbers")`,
+  stretch: `# Add up marks until -1 is entered (a rogue value), then print the total and the average.
+# Use while True and break.
+total = 0
+count = 0
+while True:
+    mark = int(input("Mark (-1 to stop): "))
+
+`
+};
+const MAKE_INPUTS = {support:'', core:'4, 60, 101', stretch:'10, 20, 30, -1'};
+const MAKE_TESTS = {
+  support: [{label:'Prints 10 down to 1, then Done', output:'10\n9\n8\n7\n6\n5\n4\n3\n2\n1\nDone'}],
+  core: [{label:'Counts 3 numbers when 4, 60, 101 are typed', inputs:['4','60','101'], contains:'you typed 3 numbers'},
+         {label:'Counts 1 number when 200 is typed first', inputs:['200'], contains:'you typed 1 number'}],
+  stretch: [{label:'Total 60 and average 20.0 for 10, 20, 30, -1', inputs:['10','20','30','-1'], contains:['60','20']},
+            {label:'Works for a single mark: 8, -1', inputs:['8','-1'], contains:'8'},
+            {label:'The rogue value -1 is not counted', inputs:['5','5','-1'], contains:['10','5']}]
+};
+
+L.start({
+  root: '..',
+  title: 'While Loops',
+  subtitle: 'Year 10 · IGCSE 0478 · condition-controlled iteration',
+  level: 'core',
+
+  glossary: [
+    {term:'iteration', ko:'반복', def:'Repeating a set of instructions. A loop.'},
+    {term:'condition-controlled loop', ko:'조건 제어 반복', def:'A loop that repeats <b>while a condition is true</b>, rather than a set number of times.'},
+    {term:'pre-condition loop', ko:'선판정 반복', def:'The condition is checked <b>before</b> the loop body. A <code>while</code> loop. It may run <b>zero</b> times.'},
+    {term:'condition', ko:'조건', def:'A test that is either True or False, for example <code>count &lt;= 4</code>.'},
+    {term:'infinite loop', ko:'무한 루프', def:'A loop whose condition never becomes False, so the program never stops.'},
+    {term:'logic error', ko:'논리 오류', def:'The program runs but gives the <b>wrong result</b>. The computer shows no error message.'},
+    {term:'syntax error', ko:'구문 오류', def:'The code breaks the rules of the language, so it will not run at all.'},
+    {term:'trace table', ko:'추적 표', def:'A table showing the value of each variable every time round the loop. An exam skill.'},
+    {term:'rogue value', ko:'센티널 값', def:'A special value that ends the loop, for example -1. Also called a sentinel value.'},
+    {term:'validation', ko:'유효성 검사', def:'Checking that data entered is sensible, for example a range check.'},
+    {term:'break', ko:'중단', def:'A Python keyword that leaves the loop immediately.'}
+  ],
+
+  questions: {
+    'q-zero': {title:'A while loop checks its condition <b>before</b> the body runs. What is the smallest number of times the body can run?', opts:['0','1','2','It always runs at least once'], correct:0},
+    'predict': {title:'What are the last two lines printed?', opts:['Score: 30 / Lives: 0','Score: 30 / Lives: -1','Score: 10 / Lives: 2','Nothing — it never stops'], correct:0},
+    't-cond': {type:'text', title:'Type the condition from line 3 of the program above.', accept:['count <= 4','count<=4'], mono:true, placeholder:'count …'},
+    'q-passes': {title:'How many times does the loop body run?', opts:['3','4','5','Once'], correct:1},
+    'q-error': {title:'A program runs with no error message, but prints 10 instead of 15. What kind of error is this?', opts:['Syntax error','Logic error','Runtime error','No error'], correct:1},
+    't-fix': {type:'text', title:'In the countdown program, type the missing line that stops it looping forever.', accept:['count = count - 1','count -= 1'], mono:true, placeholder:'count = …'},
+    'q-break': {title:'What does <code>break</code> do?', opts:['Pauses the program for a second','Leaves the loop immediately','Goes back to the start of the loop','Stops the whole program'], correct:1},
+    'q-true': {title:'Why would a programmer write <code>while True:</code> with a <code>break</code> inside, instead of a condition at the top?', opts:['It runs faster','The input has to be read before it can be tested','It uses less memory','It is the only way to loop forever'], correct:1},
+    'k-validate': {type:'code', title:'Validation loop: keep asking until the age is in range', hint:'Use if age >= 1 and age <= 120: then break',
+      inputs:'200, 0, 45',
+      starter:'while True:\n    age = int(input("Enter your age (1-120): "))\n    # if the age is in range, leave the loop\n\n    print("Out of range, try again")\n\nprint("Thank you")',
+      model:'while True:\n    age = int(input("Enter your age (1-120): "))\n    if age >= 1 and age <= 120:\n        break\n    print("Out of range, try again")\n\nprint("Thank you")',
+      tests:[{label:'Accepts 45 straight away', inputs:['45'], contains:'thank you'},
+             {label:'Rejects 200 and 0, then accepts 45', inputs:['200','0','45'], contains:['out of range','thank you']},
+             {label:'Accepts the lowest valid age, 1', inputs:['1'], contains:'thank you'},
+             {label:'Rejects 121 (just outside the range)', inputs:['121','60'], contains:'out of range'}]},
+    't-rogue': {type:'text', title:'In the Parsons program, which value stops the loop?', accept:['-1','minus 1'], mono:true, placeholder:'a value'},
+    't-gaps': {type:'text', title:'How many times is "Too short - try again" printed?', accept:['1','once'], placeholder:'a number'},
+    'ex1': {title:'Which loop would you choose to keep asking for a password until it is correct?', opts:['A count-controlled loop, because it is faster','A condition-controlled (while) loop, because the number of tries is not known','Either — there is no difference','No loop is needed'], correct:1},
+    'ex2': {title:'What is printed?', code:'x = 10\nwhile x > 10:\n    print(x)\n    x = x - 1\nprint("End")', opts:['10 then End','End','10 9 8 … then End','Nothing at all'], correct:1},
+    't-ex3': {type:'text', title:'Write the condition for a loop that keeps going while <code>tries</code> is less than 3.', accept:['tries < 3','while tries < 3:','tries<3'], mono:true, placeholder:'tries …'},
+    'ex4': {title:'A loop never stops. Which is the most likely cause?', opts:['A missing colon','The variable in the condition never changes','The loop body is indented','There is a break in the loop'], correct:1},
+    'c-lesson': {type:'checkin', title:'How did you get on with today\'s tasks?'},
+    'conf': {title:'How confident do you feel about while loops now?', opts:['1 · Not yet','2','3','4','5 · Very confident'], correct:-1}
+  },
+
+  stages: [
+    {key:'bugs', label:'Logic errors', html:`
+      <div class="stage-head"><div><div class="eyebrow">Starter · 8 minutes</div><h2 id="h-bugs">Find the logic error</h2></div>
+      <p class="lead">Every program below <b>runs</b>. None of them gives an error message. All of them give the <b>wrong answer</b>.</p></div>
+      <div class="mini">
+        <div><b class="big">Syntax error</b>breaks the rules, so it won't run</div>
+        <div><b class="big">Logic error</b>runs, but the result is wrong</div>
+        <div><b class="big">Exam tip</b>logic errors are found by tracing, not by the computer</div>
+      </div>
+      <div data-show="support"><h3><span class="tier support">Support</span>Countdown</h3><div id="bugS"></div></div>
+      <div data-show="core"><h3><span class="tier core">Core</span>Adding up 1 to 5</h3><div id="bugC"></div></div>
+      <div data-show="stretch"><h3><span class="tier stretch">Stretch</span>Average of some marks</h3><div id="bugX"></div></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>5 minutes in pairs, then take answers. Ask <b>what</b> is wrong before <b>where</b> it is wrong.</li>
+        <li>Support: nothing changes <code>count</code>, so the condition stays True — an infinite loop. The page stops it after 3 seconds.</li>
+        <li>Core: <code>i &lt; 5</code> stops one too early. The answer 10 instead of 15 is a classic off-by-one error, worth a mark in the exam.</li>
+        <li>Stretch: <code>total = 0</code> is inside the loop, so the running total is wiped every time round. It prints the last mark, not the average.</li>
+        <li>Praise prompt: "You found a bug the computer could not find. That is exactly what a trace table is for."</li></ul></div>`},
+
+    {key:'objectives', label:'Objectives', html:`
+      <div class="stage-head"><div><div class="eyebrow">Objectives · 학습 목표</div><h2 id="h-objectives">What we are learning today</h2></div>
+      <p class="lead">A <b>while</b> loop is a <b>pre-condition, condition-controlled</b> loop: it tests first, then repeats.</p></div>
+      <div class="cols">
+        <div class="panel"><h3>By the end of this lesson I can…</h3>
+          <ul class="obj">
+            <li>write a <code>while</code> loop with a condition that stops</li>
+            <li>complete a <b>trace table</b> for a while loop</li>
+            <li>tell a <b>logic error</b> from a syntax error, and find one by tracing</li>
+            <li>use <code>while True</code> with <code>break</code> for input validation</li>
+          </ul></div>
+        <div class="panel"><h3>How will I know I can do it?</h3>
+          <p><span class="tier support">Support</span>I can complete a trace table with the first row given, and fix a loop that never stops.</p>
+          <p><span class="tier core">Core</span>I can complete a whole trace table and write a validation loop that re-asks until the input is valid.</p>
+          <p><span class="tier stretch">Stretch</span>I can explain why a while loop may run zero times, and use a rogue value to end a loop.</p>
+          <p class="small muted" style="margin-top:8px">Key words today: <b>iteration · condition · pre-condition loop · infinite loop · logic error · trace table · rogue value · break</b>. Press <b>Key words</b> at the top for the Korean meanings.</p></div>
+      </div>
+      <div class="cols">
+        <div class="panel"><h3>The plan</h3>
+          <ol class="obj">
+            <li><b>Predict</b> and trace a while loop</li>
+            <li>Complete a trace table on your own (exam skill)</li>
+            <li>Logic errors, and loops that never stop</li>
+            <li><code>while True</code> and <code>break</code> · validation on your laptop</li>
+            <li>Parsons problem · fill the gaps · <b>Make</b></li>
+            <li>Exit ticket</li>
+          </ol></div>
+        <div data-vote="q-zero"></div>
+      </div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>0478 links: 8.1 iteration (count-controlled and condition-controlled), trace tables and finding errors, validation with a range check.</li>
+        <li>The vote is the classic exam point: a pre-condition loop tests <b>before</b> the body, so it can run <b>zero</b> times. Keep it hidden until everyone has answered.</li>
+        <li>Say clearly that <code>REPEAT … UNTIL</code> and <code>FOR … NEXT</code> come in the next lesson; today is only <code>while</code>.</li></ul></div>`},
+
+    {key:'predict', label:'Predict', primm:true, html:`
+      <div class="stage-head"><div><div class="eyebrow">PRIMM · Predict</div><h2 id="h-predict">What does this program print?</h2></div>
+      <p class="lead">Don't run it. Follow <code>lives</code> and <code>score</code> with your partner.</p></div>
+      <div class="cols">
+        <div class="panel">${code(PREDICT)}
+          <p data-show="support" class="small"><span class="tier support">Support</span>Write <code>lives</code> and <code>score</code> on your whiteboard and change them as each line runs.</p>
+          <p data-show="core" class="small"><span class="tier core">Core</span>Which line makes the condition become False?</p>
+          <p data-show="stretch" class="small"><span class="tier stretch">Stretch</span>What would <code>lives</code> be if the condition was <code>lives &gt;= 0</code>?</p></div>
+        <div data-vote="predict"></div>
+      </div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Common wrong answer: <b>Lives: -1</b>. Students think the loop runs once more before it checks.</li>
+        <li>Don't reveal yet — the trace table on the next stage proves it.</li>
+        <li>Stretch answer: with <code>lives &gt;= 0</code> the loop runs 4 times and lives ends at -1.</li></ul></div>`},
+
+    {key:'trace', label:'Trace table', primm:true, html:`
+      <div class="stage-head"><div><div class="eyebrow">Exam skill</div><h2 id="h-trace">Complete the trace table</h2></div>
+      <p class="lead">One row for each time the condition is tested. This is how the exam expects you to work out an answer.</p></div>
+      <div id="traceHost"></div>
+      <div class="cols"><div data-vote="t-cond"></div><div data-vote="q-passes"></div></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Model row 1 on the board first: <code>count</code> is 1, the condition is TRUE, <code>total</code> becomes 1.</li>
+        <li>Point out the final row: the condition is FALSE, the loop ends, and only then is <code>10</code> printed.</li>
+        <li>Answers: rows 1–4 are TRUE with totals 1, 3, 6, 10; row 5 is <code>count</code> 5, FALSE, total 10, output 10.</li>
+        <li>In the exam, marks are given for the values, not for neat handwriting. Tell students to write every change.</li>
+        <li><b>Show answers</b> is on your screen only — students see it when you project it.</li></ul></div>`},
+
+    {key:'never', label:'Loops that never stop', html:`
+      <div class="stage-head"><div><div class="eyebrow">Common error</div><h2 id="h-never">Infinite loops and off-by-one</h2></div>
+      <p class="lead">Three things must be right: <b>set up</b> the variable, a <b>condition</b>, and something in the body that <b>changes</b> the variable.</p></div>
+      <div class="cols">
+        <div class="panel"><h3>This never stops</h3>${code(`count = 5
+while count > 0:
+    print(count)
+print("Lift off!")`)}
+          <div class="bar"><button class="btn primary" id="infRun">▶ Run it (it stops after 3 seconds)</button></div>
+          <pre class="out" id="infOut" hidden></pre>
+          <p class="small muted">In a real IDE you would press <b>Ctrl + C</b>. In an exam, say "the loop is infinite because <code>count</code> never changes".</p></div>
+        <div data-vote="t-fix"></div>
+      </div>
+      <div class="cols">
+        <div class="panel"><h3>Off by one</h3>
+          <p class="small">Both loops are meant to print 1 to 5.</p>
+          ${code(`i = 1
+while i < 5:        # stops one too early
+    print(i)
+    i = i + 1`)}
+          ${code(`i = 1
+while i <= 5:       # correct
+    print(i)
+    i = i + 1`)}
+          <p class="small muted">In the exam, check the <b>first</b> and <b>last</b> time round the loop. That is where the marks are lost.</p></div>
+        <div data-vote="q-error"></div>
+      </div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Run the infinite loop and let the numbers pile up. Ask: "Which of the three parts is missing?"</li>
+        <li>Typed answer accepts <code>count = count - 1</code> or <code>count -= 1</code>, with any spacing.</li>
+        <li>Link back to the starter: Core had the off-by-one, Support had the infinite loop.</li></ul></div>`},
+
+    {key:'true', label:'while True and break', html:`
+      <div class="stage-head"><div><div class="eyebrow">A useful pattern</div><h2 id="h-true">while True … break</h2></div>
+      <p class="lead">Sometimes you cannot test the input until you have read it. Then programmers loop forever on purpose and leave the loop with <code>break</code>.</p></div>
+      <div class="cols">
+        <div class="panel"><h3>With <code>while True</code> and <code>break</code></h3>${code(PIN)}
+          <p class="small">The condition <code>True</code> is always true, so the only way out is <code>break</code>.</p>
+          <div class="bar"><button class="btn primary" id="pinRun">▶ Run it</button></div>
+          <label class="inbox"><span>⌨ Inputs <small>typed in order, separated by commas</small></span><input id="pinIn" value="0000, 9999, 1234" spellcheck="false"></label>
+          <pre class="out" id="pinOut" hidden></pre></div>
+        <div class="panel"><h3>The same job with a condition</h3>${code(NOBREAK)}
+          <p class="small">This works too, but <code>pin</code> has to be given a starting value first, and the input line appears twice in longer programs.</p>
+          <ul class="qs">
+            <li><details class="q"><summary>Which one would you write in the exam?</summary><div class="ans">Either is fine in Python. In <b>pseudocode</b> the marks are for a correct condition, so make sure your condition is right whichever you choose. <code>break</code> is a Python keyword, not pseudocode.</div></details></li>
+            <li data-show="stretch"><details class="q"><summary><span class="tier stretch">Stretch</span>What is the danger of <code>while True</code>?</summary><div class="ans">If the <code>break</code> is never reached — for example it is inside an <code>if</code> that is never true — the program never stops.</div></details></li>
+          </ul></div>
+      </div>
+      <div class="cols"><div data-vote="q-break"></div><div data-vote="q-true"></div></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Run the PIN program with the Inputs box: two wrong tries, then 1234. Change the inputs live and run it again.</li>
+        <li>Make the rule explicit: <b>every <code>while True</code> needs a <code>break</code></b>, and the break usually sits inside an <code>if</code>.</li>
+        <li>Mention that <code>break</code> is Python. In Cambridge pseudocode you would use a condition on the WHILE line.</li></ul></div>`},
+
+    {key:'live', label:'Code it live', html:`
+      <div class="stage-head"><div><div class="eyebrow">Code on your laptop</div><h2 id="h-live">Validation: keep asking until the age is sensible</h2></div>
+      <p class="lead">A <b>range check</b> only accepts an age from 1 to 120. Anything else is asked for again.</p></div>
+      <ol>
+        <li>Find the code box below on your own laptop.</li>
+        <li>Add the <code>if</code> and the <code>break</code> so a valid age leaves the loop.</li>
+        <li>Press <b>Run</b>, then <b>Check my code</b>, then <b>Send to teacher</b>.</li>
+      </ol>
+      <p data-show="support"><span class="tier support">Support</span>The condition is <code>age >= 1 and age <= 120</code>. Put <code>break</code> on the next line, indented inside the <code>if</code>.</p>
+      <p data-show="core"><span class="tier core">Core</span>Finished? Print how many wrong attempts the user made before the valid one.</p>
+      <p data-show="stretch"><span class="tier stretch">Stretch</span>Finished? Add a second check so an age that is not a whole number is also rejected, and explain which validation check you used.</p>
+      <div data-vote="k-validate"></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Press <b>Open on laptops</b>. The Inputs box plays the user: 200 and 0 are rejected, then 45 is accepted.</li>
+        <li>The checks run the program four times with different inputs, so hard-coding will not pass.</li>
+        <li>Use <b>Peek</b> to watch the programs come in, then <b>Show results</b> and <b>Show big</b> on one that nearly works.</li>
+        <li>Exam language: this is a <b>range check</b>, and re-asking is <b>validation</b>, not verification.</li></ul></div>`},
+
+    {key:'parsons', label:'Parsons problem', html:`
+      <div class="stage-head"><div><div class="eyebrow">Parsons problem</div><h2 id="h-parsons">Add up marks until -1 is entered</h2></div>
+      <p class="lead">-1 is a <b>rogue value</b>: a value that could never be a real mark, used to end the loop. Tap a line to add it.</p></div>
+      <p data-show="support"><span class="tier support">Support</span>The indentation is done. Set up <code>total</code> first, and read the first mark before the loop.</p>
+      <p data-show="core"><span class="tier core">Core</span>Order the lines <b>and</b> set the indentation with ⇤ and ⇥.</p>
+      <p data-show="stretch"><span class="tier stretch">Stretch</span>Order and indent. <b>Two lines are not needed</b> — one of them would add the rogue value to the total.</p>
+      <div id="parsonsHost"></div>
+      <div data-vote="t-rogue"></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Expected output with the inputs 10, 20, -1: <code>Total: 30</code>.</li>
+        <li>The exam pattern is: read one value <b>before</b> the loop, then read the next value at the <b>end</b> of the loop body.</li>
+        <li>Stretch distractors: <code>while mark == -1:</code> never runs, and <code>total = total + mark</code> placed after the input adds -1 to the total.</li></ul></div>`},
+
+    {key:'gaps', label:'Fill the gaps', html:`
+      <div class="stage-head"><div><div class="eyebrow">Fill the gaps</div><h2 id="h-gaps">Length check on a password</h2></div>
+      <p class="lead">A <b>length check</b> makes sure a password is long enough. Keep asking while it is too short.</p></div>
+      <div class="cols">
+        <div class="panel" id="gapsHost"></div>
+        <div class="panel"><h3>Think about it</h3><ul class="qs">
+          <li><details class="q"><summary>Why is the first password read before the loop?</summary><div class="ans">The condition uses <code>password</code>, so it must already exist the first time the condition is tested. In a pre-condition loop the test happens first.</div></details></li>
+          <li><details class="q"><summary>Which validation check is this?</summary><div class="ans">A <b>length check</b>. A <b>range check</b> would be for numbers, a <b>presence check</b> would test that something was entered at all.</div></details></li>
+          <li data-show="stretch"><details class="q"><summary><span class="tier stretch">Stretch</span>How would you allow only 3 attempts?</summary><div class="ans">Add a counter and combine the conditions: <code>while len(password) &lt; 8 and tries &lt; 3:</code>, then check after the loop whether the password was accepted.</div></details></li>
+        </ul></div>
+      </div>
+      <div data-vote="t-gaps"></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Answers: <code>while</code> and <code>&lt;</code>. Output: <code>Too short - try again</code> once, then <code>Password accepted</code>.</li>
+        <li>The second password is set in the code so the program can run in class without typing.</li></ul></div>`},
+
+    {key:'make', label:'Make', primm:true, html:`
+      <div class="stage-head"><div><div class="eyebrow">PRIMM · Make</div><h2 id="h-make">Your turn: write a while loop</h2></div>
+      <p class="lead">Write your program, run it, then press <b>Check my code</b>.</p></div>
+      <div class="cols">
+        <div class="panel">
+          <div data-show="support"><h3><span class="tier support">Support</span>Countdown</h3>
+            <ol><li>The loop and the variable are started for you.</li><li>Print <code>count</code>, then make it 1 smaller.</li><li>Both lines go <b>inside</b> the loop (4 spaces).</li></ol>
+            <p class="small muted">Remember: if nothing changes <code>count</code>, the loop never stops.</p></div>
+          <div data-show="core"><h3><span class="tier core">Core</span>Keep asking until the number is over 100</h3>
+            <p>Count how many numbers the user types, then print <code>You typed 3 numbers</code>.</p>
+            <p class="small muted">Where should <code>tries = tries + 1</code> go so that the last number is counted too?</p></div>
+          <div data-show="stretch"><h3><span class="tier stretch">Stretch</span>Marks with a rogue value</h3>
+            <p>Read marks until -1 is entered. Print the <b>total</b> and the <b>average</b>. Use <code>while True</code> and <code>break</code>, and make sure -1 is not added to the total or counted.</p>
+            <p class="small muted">Think: where does the <code>break</code> go, and what happens if the very first mark is -1?</p></div>
+          <p class="small muted">Changing the level loads that level's starting code.</p>
+        </div>
+        <div class="panel"><div id="makeEd"></div></div>
+      </div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>10–12 minutes. The checks run the program with different inputs, so hard-coding will not pass.</li>
+        <li>Core answer: <code>tries = tries + 1</code> goes inside the loop, straight after the input.</li>
+        <li>Stretch: <code>if mark == -1: break</code> comes before the total is changed. Dividing by <code>count</code> when count is 0 would crash — a good discussion.</li></ul></div>`},
+
+    {key:'exit', label:'Exit ticket', html:`
+      <div class="stage-head"><div><div class="eyebrow">Exit ticket</div><h2 id="h-exit">Check your understanding</h2></div>
+      <p class="lead">Answer on your laptop. Nobody sees the results until they are revealed.</p></div>
+      <div data-vote="ex1"></div>
+      <div data-vote="ex2"></div>
+      <div class="cols"><div data-vote="t-ex3"></div><div data-vote="ex4"></div></div>
+      <div class="cols"><div data-vote="c-lesson"></div><div data-vote="conf"></div></div>
+      <div class="notes"><h3>Teacher notes</h3><ul>
+        <li>Question 2 is the zero-times case again: the condition is False straight away, so only <code>End</code> is printed. Expect this to split the class.</li>
+        <li>Reveal one at a time and ask a student to explain before you show the answer.</li>
+        <li>Next lesson: <code>FOR … NEXT</code> and <code>REPEAT … UNTIL</code>, and choosing the right loop for the job.</li>
+        <li>Open <b>Results</b> and press <b>Copy student results</b> before you end the session.</li></ul></div>`}
+  ],
+
+  ready(){
+    /* starter bug hunts */
+    L.bugHunt('#bugS', {code:BUG_SUPPORT, id:'bugSed', bugs:[{line:4, what:'Nothing changes <code>count</code>, so <code>count &gt; 0</code> stays True forever. The loop needs <code>count = count - 1</code>.'}],
+      tests:[{label:'Prints 5 4 3 2 1 then Lift off!', output:'5\n4\n3\n2\n1\nLift off!'}]});
+    L.bugHunt('#bugC', {code:BUG_CORE, id:'bugCed', bugs:[{line:4, what:'<code>i &lt; 5</code> stops when i is 5, so 5 is never added. It should be <code>i &lt;= 5</code>.'}],
+      tests:[{label:'Prints Total: 15', output:'Total: 15'}]});
+    L.bugHunt('#bugX', {code:BUG_STRETCH, id:'bugXed', bugs:[{line:6, what:'<code>total = 0</code> is inside the loop, so the running total is wiped every time round. It belongs before the loop (line 2), where it already is.'}],
+      tests:[{label:'Average of 10, 20, 30 is 20.0', inputs:['10','20','30','-1'], contains:'20'},
+             {label:'Average of 4, 8 is 6.0', inputs:['4','8','-1'], contains:'6'}]});
+
+    /* trace table for students to complete */
+    L.traceFill('#traceHost', {
+      code: TRACE,
+      note: 'Write one row each time the condition on line 3 is tested. Leave OUTPUT empty until something is printed.',
+      cols: ['count', 'count <= 4', 'total', 'OUTPUT'],
+      rows: [['1','TRUE','1',''],
+             ['2','TRUE','3',''],
+             ['3','TRUE','6',''],
+             ['4','TRUE','10',''],
+             ['5','FALSE','10','10']],
+      finalQ: {label:'What is printed at the end?', answer:'10'}
+    });
+
+    /* infinite loop demo */
+    L.$('#infRun').onclick = async () => { const o = L.$('#infOut'); o.hidden = false; o.textContent = 'Running…';
+      L.showResult(o, await L.run(`count = 5
+while count > 0:
+    print(count)
+print("Lift off!")`)); };
+
+    /* while True + break demo */
+    L.$('#pinRun').onclick = async () => { const o = L.$('#pinOut'); o.hidden = false; o.textContent = 'Running…';
+      const ins = L.$('#pinIn').value.split(',').map(x => x.trim()).filter(Boolean);
+      L.showResult(o, await L.run(PIN, ins)); };
+
+    /* Parsons: totalling with a rogue value */
+    L.parsons('#parsonsHost', {
+      inputs: '10, 20, -1',
+      lines: [{id:'a', t:'total = 0', ind:0},
+              {id:'b', t:'mark = int(input("Mark (-1 to stop): "))', ind:0},
+              {id:'c', t:'while mark != -1:', ind:0},
+              {id:'d', t:'total = total + mark', ind:1},
+              {id:'e', t:'mark = int(input("Mark (-1 to stop): "))', ind:1},
+              {id:'f', t:'print("Total:", total)', ind:0}],
+      distract: [{id:'x', t:'while mark == -1:', ind:0}, {id:'y', t:'total = total + mark', ind:1}],
+      order: ['a','b','c','d','e','f']
+    });
+
+    /* gaps: length check */
+    L.gaps('#gapsHost', {
+      template: `password = "abc"
+__G0__ len(password) __G1__ 8:
+    print("Too short - try again")
+    password = "mysecretpass"
+print("Password accepted")`,
+      gaps: [{a:'while', hint:'The keyword that starts a condition-controlled loop.'},
+             {a:'<', hint:'Keep looping while the length is less than 8.'}],
+      bank: ['while', 'if', 'for', '<', '>', '=='],
+      build: GAPS_BUILD
+    });
+
+    /* Make */
+    let makeEd;
+    const mountMake = lv => { makeEd = L.editor('#makeEd', MAKE_START[lv], {id:'makeCode', inputs: MAKE_INPUTS[lv] || undefined, tests: () => MAKE_TESTS[document.body.dataset.level]}); };
+    mountMake('core');
+    L.onLevel(lv => mountMake(lv));
+  }
+});
+</script>
+</body>
+</html>

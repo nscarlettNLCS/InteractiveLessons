@@ -521,3 +521,17 @@ html, body, code, pre, kbd, samp, textarea, input, button, .code, .gapcode, .out
 .spicked .btn{justify-self:center;background:#fff;color:#14532D;border:0;font-weight:800;padding:10px 28px}
 @keyframes pickpop{from{transform:scale(.85);opacity:0}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){.spicked .spin{animation:none}}
+
+/* ---- trace table students fill in ---- */
+.ttable th.rn,.ttable td.rn{min-width:2.2em;padding-inline:8px;color:var(--muted);font-size:.9rem;background:var(--surface-2)}
+.tffill td{padding:0}
+.tffill td.rn{padding:6px 8px}
+.tffill input{width:100%;min-width:4.5em;border:0;background:transparent;color:var(--ink);font-family:var(--mono);font-size:1.15rem;text-align:center;padding:12px 6px}
+.tffill input:focus{outline:3px solid var(--mark);outline-offset:-3px}
+.tffill input.ok{background:var(--good-soft);color:var(--good);font-weight:700}
+.tffill input.bad{background:var(--bad-soft);color:var(--bad);font-weight:700}
+.tffill .given{display:block;padding:12px 6px;font-weight:700;background:var(--mark-soft)}
+.tffinal{display:grid;gap:6px;font-weight:700;margin-top:10px}
+.tffinal input{border:2px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--surface-2);color:var(--ink);font-family:var(--mono)}
+.tffinal input.ok{border-color:var(--good);background:var(--good-soft);color:var(--good)}
+.tffinal input.bad{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}

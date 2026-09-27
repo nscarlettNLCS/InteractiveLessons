@@ -105,7 +105,7 @@ const testCode = tests => '\n\n' + tests.map(t =>
 
 /* ---------------- activity tracking (auto check-ins from student laptops) ---------------- */
 const ACTS = {};
-const KIND = {code:'Code challenge', parsons:'Parsons problem', gaps:'Fill the gaps', annotate:'Annotate the code', sorter:'Sort it', bug:'Spot the bugs', fix:'Fix the bugs'};
+const KIND = {code:'Code challenge', trace:'Trace table', parsons:'Parsons problem', gaps:'Fill the gaps', annotate:'Annotate the code', sorter:'Sort it', bug:'Spot the bugs', fix:'Fix the bugs'};
 function track(h, kind){
   const stg = h && h.closest ? h.closest('.stage') : null; if(!stg) return null;
   if(h.dataset.act && ACTS[h.dataset.act]) return h.dataset.act;
@@ -402,6 +402,7 @@ function parsons(sel, cfg){
       <div class="zone bankz" aria-label="Line bank"><h3>Line bank</h3></div>
       <div class="zone progz" aria-label="Your program"><h3>Your program</h3></div>
     </div>
+    ${cfg.inputs !== undefined ? `<label class="inbox"><span>⌨ Inputs <small>typed in order, separated by commas</small></span><input class="inputs" value="${esc(cfg.inputs)}" spellcheck="false" autocomplete="off"></label>` : ''}
     <div class="bar"><button class="btn mark pcheck">✓ Check order</button><button class="btn primary prun">▶ Run my program</button><button class="btn pshuffle">Start again</button></div>
     <div class="pfb" aria-live="polite"></div>
     <pre class="out pout" hidden></pre>`;
@@ -450,7 +451,9 @@ function parsons(sel, cfg){
     else if(state.prog.length < n) fb.innerHTML = `<div class="feedback mid">${right} of ${n} lines are correct so far. Keep adding lines.</div>`;
     else fb.innerHTML = `<div class="feedback ${right>=3?'mid':'bad'}">${right} of ${n} lines are in the right place${indBad?` · ${indBad} ${indBad>1?'lines need':'line needs'} the indentation fixing (amber)`:''}${state.prog.length>n?' · there are extra lines in your program':''}.</div>`;
   };
-  $('.prun', h).onclick = async () => { const o = $('.pout', h); o.hidden = false; o.textContent = 'Running…'; showResult(o, await runPython(source())); };
+  $('.prun', h).onclick = async () => { const o = $('.pout', h); o.hidden = false; o.textContent = 'Running…';
+    const ib = $('.inputs', h), ins = ib ? ib.value.split(',').map(x => x.trim()).filter(x => x !== '') : null;
+    showResult(o, await runPython(source(), ins)); };
   $('.pshuffle', h).onclick = setup;
   onLevel(setup); setup();
 }
@@ -640,6 +643,59 @@ function loopTrace(sel, cfg){
   $('.lall', h).onclick = () => { i = steps.length-1; draw(); };
   $('.lrun', h).onclick = async () => { const o = $('.lout', h); o.textContent = 'Running…'; showResult(o, await runPython(cfg.code)); };
   draw();
+}
+
+/* ---------------- trace table for students to complete (exam skill) ---------------- */
+/* cfg: {code, cols:['count','count <= 5','OUTPUT'], rows:[['1','TRUE','']...], given, finalQ:{label, answer}, note, inputs} */
+function traceFill(sel, cfg){
+  const h = host(sel); const act = track(h, 'trace');
+  const cols = cfg.cols, rows = cfg.rows;
+  h.innerHTML = `
+    <div class="cols">
+      <div class="panel">${codeBlock(cfg.code)}
+        ${cfg.note ? `<p class="small muted">${cfg.note}</p>` : ''}
+        <div class="bar"><button class="btn primary tfrun">▶ Run it (after you have finished)</button></div>
+        <pre class="out tfout" hidden></pre></div>
+      <div class="panel">
+        <h3>Complete the trace table</h3>
+        <p class="small tfhint"></p>
+        <div class="ttwrap"><table class="ttable tffill"><thead><tr><th class="rn">#</th>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody></tbody></table></div>
+        ${cfg.finalQ ? `<label class="tffinal"><span>${cfg.finalQ.label}</span><input class="tfq" autocomplete="off" spellcheck="false"></label>` : ''}
+        <div class="bar"><button class="btn mark tfcheck">✓ Check my table</button><button class="btn tfshow tonly">Show answers</button><button class="btn tfclear">Clear</button></div>
+        <div class="tffb" aria-live="polite"></div>
+      </div>
+    </div>`;
+  const nm = v => String(v).trim().replace(/\s+/g,' ').toLowerCase();
+  function build(){
+    const lv = document.body.dataset.level;
+    const pre = lv === 'support' ? (cfg.given === undefined ? 1 : cfg.given) : 0;
+    $('.tfhint', h).innerHTML = lv === 'support'
+      ? '<span class="tier support">Support</span>The first row is done for you. Fill in one row for each time round the loop.'
+      : lv === 'stretch'
+      ? '<span class="tier stretch">Stretch</span>Fill in the table, then answer the question underneath — without running the program.'
+      : '<span class="tier core">Core</span>Fill in one row for each time round the loop. Leave a cell empty if nothing is printed.';
+    $('tbody', h).innerHTML = rows.map((r,ri) => `<tr><td class="rn">${ri+1}</td>${r.map((v,ci) =>
+      `<td>${ri < pre ? `<span class="given">${esc(v)}</span>` : `<input data-r="${ri}" data-c="${ci}" aria-label="${esc(cols[ci])} row ${ri+1}" autocomplete="off" spellcheck="false">`}</td>`).join('')}</tr>`).join('');
+    $$('.tffill input', h).forEach(i => i.addEventListener('input', () => i.classList.remove('ok','bad')));
+    const q = $('.tfq', h); if(q){ q.value = ''; q.classList.remove('ok','bad'); }
+    $('.tffb', h).innerHTML = ''; $('.tfout', h).hidden = true;
+  }
+  $('.tfcheck', h).onclick = () => {
+    let right = 0, total = 0;
+    $$('.tffill input', h).forEach(i => { total++;
+      const want = rows[+i.dataset.r][+i.dataset.c], ok = nm(i.value) === nm(want);
+      i.classList.toggle('ok', ok); i.classList.toggle('bad', !ok); if(ok) right++; });
+    const q = $('.tfq', h); let qok = true;
+    if(q){ qok = nm(q.value) === nm(cfg.finalQ.answer); q.classList.toggle('ok', qok); q.classList.toggle('bad', !qok); }
+    const all = right === total && qok;
+    $('.tffb', h).innerHTML = `<div class="feedback ${all ? 'good' : right >= total/2 ? 'mid' : 'bad'}">${right} of ${total} cells correct${q && !qok ? ' · check the question underneath' : ''}${all ? '. Now run the program to prove it.' : '. Red cells need another look.'}</div>`;
+    if(all) done(act);
+  };
+  $('.tfshow', h).onclick = () => { $$('.tffill input', h).forEach(i => { i.value = rows[+i.dataset.r][+i.dataset.c]; i.classList.add('ok'); });
+    const q = $('.tfq', h); if(q){ q.value = cfg.finalQ.answer; q.classList.add('ok'); } };
+  $('.tfclear', h).onclick = build;
+  $('.tfrun', h).onclick = async () => { const o = $('.tfout', h); o.hidden = false; o.textContent = 'Running…'; showResult(o, await runPython(cfg.code, cfg.inputs || null)); };
+  onLevel(build); build();
 }
 
 /* ---------------- range() explorer ---------------- */
@@ -1394,7 +1450,7 @@ function start(cfg){
     if(r && qs.has('join') && window.firebase && store.get('lesson-student-name')) Student.join(r); }
 }
 
-return { start, editor, codeTask, studentAsk, Student, ACTS, trace, parsons, gaps, annotate, sorter, askWidget, bugHunt, loopTrace, rangeExplorer,
+return { start, editor, codeTask, studentAsk, Student, ACTS, trace, traceFill, parsons, gaps, annotate, sorter, askWidget, bugHunt, loopTrace, rangeExplorer,
   code: codeBlock, scopeCode, hl, run: runPython, showResult, onLevel, setLevel,
   $, $$, esc, CHECKIN, WIDGETS, Live, Results, get root(){ return ROOT; } };
 })();
