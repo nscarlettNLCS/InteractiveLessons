@@ -176,6 +176,20 @@ function editor(sel, start, opts){
 const CHECKIN = ['All correct','Partly done','Stuck'];
 const WIDGETS = {};
 const norm = (t, mono) => { let s = String(t).trim().toLowerCase().replace(/\s+/g,' '); return mono ? s.replace(/\s+/g,'') : s; };
+/* the live bar under a question: every question takes answers for the whole session unless locked or its answers are shown */
+function liveBar(h, id, s, openText){
+  let on = false; try{ on = !!Live.on; }catch(e){}
+  const p = $('.lstate', h), lk = $('.lclose', h), push = $('.lopen', h);
+  const text = !on ? 'Not live' : s.shown ? 'Answers shown' : s.locked ? '🔒 Locked' : openText + (s.pushed ? ' · on screens' : '');
+  p.className = 'pill lstate ' + (on && !s.locked && !s.shown ? 'open' : 'closed');
+  p.textContent = text;
+  push.disabled = on && s.pushed;
+  push.textContent = on && s.pushed ? '📣 On screens' : '📣 Send to screens';
+  lk.disabled = !on || s.shown;
+  lk.setAttribute('aria-pressed', !!s.locked);
+  lk.textContent = s.locked ? '🔓 Unlock' : '🔒 Lock answers';
+}
+
 function askWidget(sel, id, q){
   if(q.type === 'code') return codeTask(sel, id, q);
   const h = host(sel);
@@ -184,7 +198,7 @@ function askWidget(sel, id, q){
   const correct = type === 'checkin' ? -1 : (q.correct === undefined ? -1 : q.correct);
   const L = i => 'ABCDEF'[i];
   const marked = type === 'text' ? !!(q.accept && q.accept.length) : correct >= 0;
-  const openLabel = 'Open on devices';
+  const openLabel = '📣 Send to screens';
   const revealLabel = type === 'text' ? 'Show answers' : 'Reveal answer';
 
   h.innerHTML = type === 'text' ? `
@@ -192,12 +206,12 @@ function askWidget(sel, id, q){
     <div class="resp" hidden></div>
     <div class="accepted" hidden></div>
     <div class="bar">${marked?`<button class="btn mark reveal">${revealLabel}</button>`:''}<button class="btn peek">Peek</button><button class="btn resetv">Clear answers</button><span class="pct"></span></div>
-    <div class="livebar"><button class="btn primary lopen">${openLabel}</button><button class="btn lclose">Close</button><span class="pill closed lstate">Not open</span><span class="small muted"><span class="count lcount">0</span> answers</span></div>`
+    <div class="livebar"><button class="btn primary lopen">${openLabel}</button><button class="btn lclose" aria-pressed="false">🔒 Lock answers</button><span class="pill closed lstate">Not live</span><span class="small muted"><span class="count lcount">0</span> answers</span></div>`
   : `
     <div class="options">${opts.map((o,i)=>`
       <div class="opt-wrap"><button class="opt" data-i="${i}" aria-label="Add a hand-count vote for option ${L(i)}"><span class="letter">${L(i)}</span><pre>${esc(o)}</pre><span class="tally">0<span class="split"></span></span><span class="votebar"><i></i></span></button><button class="minus" data-i="${i}" aria-label="Remove a hand-count vote from ${L(i)}">−</button></div>`).join('')}</div>
     <div class="bar">${marked?`<button class="btn mark reveal">${revealLabel}</button>`:''}<button class="btn peek">Peek</button><button class="btn resetv">Reset votes</button><span class="pct"></span><span class="status handhint"><span class="rcount">0</span> in · numbers stay hidden until you reveal</span></div>
-    <div class="livebar"><button class="btn primary lopen">${openLabel}</button><button class="btn lclose">Close</button><span class="pill closed lstate">Not open</span><span class="small muted"><span class="count lcount">0</span> device votes</span></div>`;
+    <div class="livebar"><button class="btn primary lopen">${openLabel}</button><button class="btn lclose" aria-pressed="false">🔒 Lock answers</button><span class="pill closed lstate">Not live</span><span class="small muted"><span class="count lcount">0</span> device votes</span></div>`;
 
   const manual = opts.map(()=>0);
   let live = opts.map(()=>0), texts = {}, revealed = false, peek = false;
@@ -258,21 +272,18 @@ function askWidget(sel, id, q){
     draw(); Live.clear(id);
   };
   $('.lopen', h).onclick = () => Live.open(id, {id, title:q.title, code:q.code||'', type, options:opts, placeholder:q.placeholder||'', mono:!!q.mono, marked});
-  $('.lclose', h).onclick = () => Live.close();
+  $('.lclose', h).onclick = () => Live.toggleLock(id);
 
   WIDGETS[id] = {
     setLive(arr, txt){ if(type === 'text'){ texts = txt || {}; } else { live = opts.map((_,i)=>arr[i]||0); } draw(); },
-    setState(active, open){ const me = active === id, st = $('.lstate', h);
-      st.className = 'pill lstate ' + (me&&open ? 'open' : 'closed');
-      st.textContent = me&&open ? (type==='text' ? 'Open: students can type' : 'Open: students can vote') : me ? 'Closed' : 'Not open';
-      $('.lopen', h).disabled = me&&open; $('.lclose', h).disabled = !(me&&open); },
+    setState(s){ liveBar(h, id, s, type === 'text' ? 'Open: students can type' : 'Open: students can vote'); },
     redraw: draw,
     meta: {id, title:q.title, opts, correct, type, marked, host:h, accept:q.accept, mono:q.mono},
     totals,
     texts(){ return texts; },
     isRight
   };
-  WIDGETS[id].setState('', false);
+  WIDGETS[id].setState({});
   draw();
 }
 
@@ -290,7 +301,7 @@ function codeTask(sel, id, q){
     <div class="cgrid" hidden></div>
     <div class="accepted cmodel" hidden></div>
     <div class="bar"><button class="btn mark reveal">${q.model ? 'Show results + model answer' : 'Show results'}</button><button class="btn peek">Peek</button><button class="btn resetv">Clear programs</button><span class="pct"></span></div>
-    <div class="livebar"><button class="btn primary lopen">Open on laptops</button><button class="btn lclose">Close</button><span class="pill closed lstate">Not open</span><span class="small muted"><span class="count lcount">0</span> programs sent</span></div>`;
+    <div class="livebar"><button class="btn primary lopen">📣 Send to screens</button><button class="btn lclose" aria-pressed="false">🔒 Lock answers</button><span class="pill closed lstate">Not live</span><span class="small muted"><span class="count lcount">0</span> programs sent</span></div>`;
   if(q.starter !== undefined) editor($('.cted', h), q.starter, {inputs: q.inputs, tests: marked ? () => tests : null, noTrack:true});
   let subs = {}, revealed = false, peek = false, filter = 'all', order = [];
   const passed = x => x && x.of > 0 && x.pass === x.of;
@@ -337,20 +348,17 @@ function codeTask(sel, id, q){
   $('.reveal', h).onclick = () => { revealed = true; draw(); Live.reveal(id, {code:true, model: q.model || '', marked}); };
   $('.resetv', h).onclick = () => { subs = {}; order = []; revealed = false; peek = false; peekBtn.textContent = 'Peek'; peekBtn.setAttribute('aria-pressed', false); draw(); Live.clear(id); };
   $('.lopen', h).onclick = () => Live.open(id, {id, title:q.title, type:'code', code:q.code||'', starter:q.starter||'', tests, inputs: q.inputs !== undefined ? String(q.inputs) : '', hasInputs: q.inputs !== undefined, hint:q.hint||''});
-  $('.lclose', h).onclick = () => Live.close();
+  $('.lclose', h).onclick = () => Live.toggleLock(id);
   WIDGETS[id] = {
     setLive(arr, txt){ subs = {}; Object.entries(txt||{}).forEach(([u,x]) => { if(x && typeof x === 'object') subs[u] = x; }); draw(); },
-    setState(active, open){ const me = active === id, st = $('.lstate', h);
-      st.className = 'pill lstate ' + (me&&open ? 'open' : 'closed');
-      st.textContent = me&&open ? 'Open: students are coding' : me ? 'Closed' : 'Not open';
-      $('.lopen', h).disabled = me&&open; $('.lclose', h).disabled = !(me&&open); },
+    setState(s){ liveBar(h, id, s, 'Open: students are coding'); },
     redraw: draw,
     meta: {id, title:q.title, type:'code', marked, host:h},
     totals(){ return [0]; },
     subs(){ return subs; },
     passed
   };
-  WIDGETS[id].setState('', false);
+  WIDGETS[id].setState({});
   draw();
 }
 
@@ -752,7 +760,7 @@ const store = { get(k){ try{ return localStorage.getItem(k); }catch(e){ return n
 const safeCell = v => (typeof v === 'string' && /^[=+\-@]/.test(v)) ? "'" + v : v;
 
 const Live = (() => {
-  const st = {on:false, code:'', db:null, uid:'', active:'', open:false, joined:0, names:{}, refs:[], follow:false, done:{},
+  const st = {on:false, code:'', db:null, uid:'', active:'', open:false, joined:0, names:{}, refs:[], follow:false, done:{}, locked:{}, shown:{},
     cls: null};
   const cfgOK = () => !!(window.firebase && window.FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey && !/PASTE/i.test(FIREBASE_CONFIG.apiKey) && FIREBASE_CONFIG.databaseURL);
   const body = () => $('#liveBody');
@@ -793,7 +801,7 @@ const Live = (() => {
       <p class="small muted" style="text-align:center">On a laptop, the code opens this lesson in student view. On a phone, it opens the answer page. The QR code opens the student view directly.</p>
       <p style="text-align:center;margin-top:8px"><b id="joinedN">${st.joined}</b> devices joined</p>
       ${names.length ? `<details class="whojoined"><summary>Who has joined (${names.length})</summary><p class="small">${names.map(esc).join(', ')}</p></details>` : ''}
-      <label class="followtog"><input type="checkbox" id="followTog" ${st.follow?'checked':''}> <span><b>Lock students to my screen</b><br><span class="small muted">Off: students move freely, and jump to a question when you open it. On: their screen follows yours.</span></span></label>
+      <label class="followtog"><input type="checkbox" id="followTog" ${st.follow?'checked':''}> <span><b>Lock students to my screen</b><br><span class="small muted">Off: students move freely and can answer any question at any time. 📣 Send to screens brings them to a question. On: their screen follows yours.</span></span></label>
       <div class="savebox">
         ${classPicker()}
         <p class="small muted">At the end of the lesson, open <b>Results</b> and press <b>Copy student results</b> before you end the session.</p>
@@ -833,7 +841,7 @@ const Live = (() => {
       const dref = st.db.ref(`rooms/${code}/done`);
       const dcb = dref.on('value', snap => { const v = snap.val() || {}; st.done = {}; Object.keys(v).forEach(a => st.done[a] = Object.keys(v[a]||{}).length); pills(); if(window.Results) Results.refresh(); });
       st.refs = [[vref,vcb],[jref,jcb],[dref,dcb]];
-      panel(); dockLabel(); Object.values(WIDGETS).forEach(w => w.redraw());
+      st.locked = {}; st.shown = {}; panel(); dockLabel(); states(); Object.values(WIDGETS).forEach(w => w.redraw());
     }catch(e){ console.error(e); st.on = false; panel(`Couldn't start a session: ${esc(e.message||String(e))}. Check the Firebase setup in README.md.`); }
   }
 
@@ -919,7 +927,7 @@ const Live = (() => {
     try{ await st.db.ref('rooms/'+st.code).remove(); }catch(e){}
     st.on = false; st.code = ''; st.active = ''; st.open = false; st.names = {};
     document.body.classList.remove('live'); $('#liveBtn').setAttribute('aria-pressed', false);
-    Object.values(WIDGETS).forEach(w => { w.setLive([], {}); w.setState('', false); }); st.done = {}; pills();
+    Object.values(WIDGETS).forEach(w => { w.setLive([], {}); w.setState({}); }); st.done = {}; st.locked = {}; st.shown = {}; pills();
     panel(); dockLabel();
   }
   function pills(){ $$('.donepill').forEach(p => { p.hidden = !st.on; $('b', p).textContent = st.done[p.dataset.for] || 0; }); }
@@ -933,7 +941,8 @@ const Live = (() => {
     const t = $('#followTog'); if(t) t.checked = st.follow;
     document.body.classList.toggle('locking', st.on && st.follow);
   }
-  const states = () => Object.keys(WIDGETS).forEach(q => WIDGETS[q].setState(st.active, st.open));
+  const qstate = id => ({pushed: st.open && st.active === id, locked: !!st.locked[id], shown: !!st.shown[id]});
+  const states = () => Object.keys(WIDGETS).forEach(q => WIDGETS[q].setState(qstate(q)));
   const dockLabel = () => { $('#dLive').textContent = st.on ? `Room ${st.code} · 👥 ${st.joined}` : ''; bar();
     if(window.__drawPicker && !$('#picker').hidden) window.__drawPicker(); };
   const upd = obj => st.on ? st.db.ref('rooms/'+st.code).update(obj).catch(e => console.error(e)) : Promise.resolve();
@@ -946,13 +955,19 @@ const Live = (() => {
     names(){ return [...new Set(Object.values(st.names).map(n => String(n||'').trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b)); },
     sessionData, tableText, get cls(){ return clsId(); },
     stage(key){ if(st.on) upd({stage:key}); },
-    open(id, q){ if(!st.on){ togglePanel(true); return; } st.active = id; st.open = true; states(); upd({active:id, open:true, reveal:-1, revealed:false, question:q, openedAt: Date.now()}); },
+    /* push a question: every student's screen goes to it. All questions take answers all session anyway. */
+    open(id, q){ if(!st.on){ togglePanel(true); return; } st.active = id; st.open = true; states();
+      const sh = st.shown[id];
+      upd({active:id, open: !st.locked[id] && !sh, reveal: sh && sh.c !== undefined ? sh.c : -1, revealed: !!sh, question:q, openedAt: Date.now()}); },
     close(){ if(!st.on) return; st.open = false; states(); upd({open:false}); },
-    reveal(id, payload){ if(!st.on) return; const o = {['answers/'+id]: payload};
-      if(st.active === id){ st.open = false; states(); o.open = false; o.revealed = true; if(payload.c !== undefined) o.reveal = payload.c; }
+    toggleLock(id){ if(!st.on) return; const on = !st.locked[id]; if(on) st.locked[id] = true; else delete st.locked[id]; states();
+      const o = {['locked/'+id]: on || null}; if(st.active === id && st.open) o.open = !on && !st.shown[id]; upd(o); },
+    reveal(id, payload){ if(!st.on) return; st.shown[id] = payload; states(); const o = {['answers/'+id]: payload};
+      if(st.active === id){ o.open = false; o.revealed = true; if(payload.c !== undefined) o.reveal = payload.c; }
       upd(o); },
     clear(id){ if(!st.on) return; st.db.ref(`rooms/${st.code}/votes/${id}`).remove().catch(()=>{});
-      const o = {['answers/'+id]: null}; if(st.active === id){ o.reveal = -1; o.revealed = false; } upd(o); },
+      delete st.shown[id]; delete st.locked[id]; states();
+      const o = {['answers/'+id]: null, ['locked/'+id]: null}; if(st.active === id){ o.reveal = -1; o.revealed = false; o.open = st.open; } upd(o); },
     deleteAnswer(id, uid){ if(!st.on) return; st.db.ref(`rooms/${st.code}/votes/${id}/${uid}`).remove().catch(()=>{}); }
   };
 })();
@@ -994,21 +1009,29 @@ function studentAsk(sel, id, q){
     inp.addEventListener('keydown', e => { if(e.key === 'Enter') $('.ssend', h).click(); });
   } else $$('.sopt', h).forEach(b => b.onclick = () => send(+b.dataset.i));
 
+  let restored = false;
   function update(){
     const r = Student.room, on = Student.on && !!r;
-    const active = on && r.active === id, open = active && r.open === true;
-    const saved = on && r.votes && r.votes[id] ? r.votes[id][Student.uid] : undefined;
-    const mine = pend !== undefined ? pend : saved;
     let key = on && r.answers ? r.answers[id] : undefined; if(typeof key === 'number') key = {c:key};
     const shown = !!key;
+    const lockedQ = on && !!(r.locked && r.locked[id]);
+    const active = on && r.active === id && r.open === true;   // the teacher has sent this one to screens
+    const open = on && !lockedQ && !shown;                      // every question takes answers all session
+    const saved = on && r.votes && r.votes[id] ? r.votes[id][Student.uid] : undefined;
+    const mine = pend !== undefined ? pend : saved;
+    /* bring back a program the student sent earlier (for example after a refresh, or on another laptop) */
+    if(type === 'code' && !restored && saved && saved.code){ restored = true;
+      let draft = null; try{ draft = sessionStorage.getItem(dkey); }catch(e){}
+      if(draft === null && ed.value !== saved.code){ ed.textarea.value = saved.code; ed.textarea.dispatchEvent(new Event('input')); } }
     const marked = !!key && (key.code ? key.marked : (key.c !== undefined && key.c >= 0) || !!(key.a && key.a.length));
+    const now = active ? 'Your teacher is on this question now. ' : '';
     $('.sstate', h).textContent = !Student.on ? 'Join your class at the top of the page to answer.'
-      : open ? (type === 'code' ? (mine === undefined ? 'Open: write your code, Run it, then Send to teacher.' : 'Sent. You can improve it and send again.')
-               : type === 'text' ? (mine === undefined ? 'Open: type your answer and press Send.' : 'Sent. You can change it until it closes.')
-               : (mine === undefined ? 'Open: choose your answer.' : 'Sent. You can change it until it closes.'))
-      : active ? (mine !== undefined ? 'Closed. Your answer was sent.' : 'Closed.')
       : shown ? 'Your teacher has shown the answers.'
-      : (type === 'code' ? 'You can try the code now. Sending opens when your teacher is ready.' : 'Waiting for your teacher to open this question.');
+      : lockedQ ? (mine !== undefined ? '🔒 Locked. Your answer was sent.' : '🔒 Your teacher has locked this question.')
+      : now + (type === 'code' ? (mine === undefined ? 'Write your code, Run it, then Send to teacher.' : 'Sent. You can improve it and send again.')
+               : type === 'text' ? (mine === undefined ? 'Type your answer and press Send.' : 'Sent. You can change it until your teacher locks it.')
+               : (mine === undefined ? 'Choose your answer.' : 'Sent. You can change it until your teacher locks it.'));
+    (h.closest('[data-vote]') || h).classList.toggle('snow', active && open);
     h.classList.toggle('sopen', open);
     if(type === 'code'){
       $('.ssend', h).disabled = !open || sending;

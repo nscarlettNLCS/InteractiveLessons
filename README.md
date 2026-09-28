@@ -35,7 +35,7 @@ First time setting up Firebase? The steps are at the bottom of this file.
 ## Running a lesson
 
 - **Live answers → Start a live session**, then show the room code and QR code. Students go to `vote.html`, which is the same link for every lesson.
-- Each question has **Open on devices**. Only one is open at a time.
+- Every question takes answers for the whole session. **📣 Send to screens** brings every student to a question; **🔒 Lock answers** stops changes to that question; showing the answers locks it too.
 - **Nobody sees the tallies until you press Reveal.** Students see "answer sent", and you see how many are in. This stops students copying the majority.
   - **Peek** shows you the split without revealing it to the class. Remember it appears on the projector.
   - **Reveal answer** (or **Show answers** for typed questions) shows the bars, marks each student right or wrong on their own device, and updates their score.
